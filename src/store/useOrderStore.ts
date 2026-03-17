@@ -1,17 +1,18 @@
 import { create } from 'zustand'
 
-    import type { OrderStatus } from '../types/pizza'
-
-const ORDER_LOCK_TIME_SECONDS = 60
+import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
+import type { OrderStatus } from '../types/pizza'
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null
 
-export function calculateTimeRemaining(createdAt: Date | string): number {
-  const createdAtDate = createdAt instanceof Date ? createdAt : new Date(createdAt)
-  const elapsedMs = Date.now() - createdAtDate.getTime()
-  const remainingMs = ORDER_LOCK_TIME_SECONDS * 1000 - elapsedMs
+function getCreatedAtTimestamp(createdAt: Date | string | number): number {
+  if (typeof createdAt === 'number') {
+    return createdAt
+  }
 
-  return Math.max(0, Math.ceil(remainingMs / 1000))
+  const createdAtDate = createdAt instanceof Date ? createdAt : new Date(createdAt)
+
+  return createdAtDate.getTime()
 }
 
 interface OrderStore {
@@ -26,8 +27,12 @@ interface OrderStore {
 export interface ActiveOrder {
   id: string
   customer_name: string
+  customer_email?: string
+  customer_phone?: string
+  delivery_address?: string
+  reference_notes?: string
   status: OrderStatus
-  created_at: Date | string
+  created_at: Date | string | number
 }
 
 const stopCountdown = () => {
@@ -49,7 +54,9 @@ export const useOrderStore = create<OrderStore>((set, get) => {
       return
     }
 
-    const timeRemaining = calculateTimeRemaining(order.created_at)
+    const timeRemaining = calculateRemainingSeconds(
+      getCreatedAtTimestamp(order.created_at),
+    )
     const isLocked = timeRemaining === 0
 
     set({ timeRemaining, isLocked })

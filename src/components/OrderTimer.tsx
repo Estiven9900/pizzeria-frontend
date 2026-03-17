@@ -1,30 +1,22 @@
 import { Clock, Lock } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { calculateRemainingSeconds } from '../utils/orderHelpers'
 
 interface OrderTimerProps {
   createdAt: number
   onCancel?: () => void
 }
 
-const COUNTDOWN_SECONDS = 60
-
-function calculateTimeRemaining(createdAt: number): number {
-  const elapsedMs = Date.now() - createdAt
-  const remainingMs = COUNTDOWN_SECONDS * 1000 - elapsedMs
-
-  return Math.max(0, Math.ceil(remainingMs / 1000))
-}
-
 export function OrderTimer({ createdAt, onCancel }: OrderTimerProps) {
   const [timeRemaining, setTimeRemaining] = useState(() =>
-    calculateTimeRemaining(createdAt),
+    calculateRemainingSeconds(createdAt),
   )
 
   useEffect(() => {
-    setTimeRemaining(calculateTimeRemaining(createdAt))
+    setTimeRemaining(calculateRemainingSeconds(createdAt))
 
     const intervalId = setInterval(() => {
-      setTimeRemaining(calculateTimeRemaining(createdAt))
+      setTimeRemaining(calculateRemainingSeconds(createdAt))
     }, 1000)
 
     return () => {
