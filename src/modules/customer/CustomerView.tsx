@@ -14,14 +14,28 @@ const pizzaImages: Record<string, string> = {
 }
 
 export function CustomerView() {
+  const addToCart = useOrderStore((state) => state.addToCart)
   const setActiveOrder = useOrderStore((state) => state.setActiveOrder)
 
-  const handleOrder = (pizzaName: string) => {
+  const handleOrder = (
+    pizzaId: string,
+    pizzaName: string,
+    sizeId: string,
+    sizeName: string,
+    price: number,
+  ) => {
+    addToCart({
+      pizzaId,
+      name: pizzaName,
+      sizeId,
+      sizeName,
+      price,
+      quantity: 1,
+    })
+
     setActiveOrder({
-      id: crypto.randomUUID(),
       customer_name: 'Cliente',
       status: 'Pending',
-      created_at: new Date(),
     })
 
     console.info(`Pedido confirmado para ${pizzaName}`)
@@ -42,7 +56,15 @@ export function CustomerView() {
             sizes={sizes}
             productConfigs={productConfigs}
             imageUrl={pizzaImages[pizza.id] ?? '/hero.png'}
-            onOrder={({ pizza: selectedPizza }) => handleOrder(selectedPizza.name)}
+            onOrder={({ pizza: selectedPizza, size, total }) =>
+              handleOrder(
+                selectedPizza.id,
+                selectedPizza.name,
+                size.id,
+                size.name,
+                total,
+              )
+            }
           />
         ))}
       </div>

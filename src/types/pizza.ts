@@ -1,6 +1,6 @@
 export type UUID = string
 
-export type OrderStatus = 'Selection' | 'Pending' | 'Ready'
+export type OrderStatus = 'Selection' | 'Pending' | 'Ready' | 'CANCELADO'
 
 export interface PizzaClickOrder {
   id: UUID

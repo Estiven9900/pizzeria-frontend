@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { OrderTimer } from '../../components/OrderTimer'
 import { useOrderStore } from '../../store/useOrderStore'
@@ -23,6 +23,7 @@ const initialValues: CheckoutFormValues = {
 
 function validate(values: CheckoutFormValues): CheckoutFormErrors {
   const errors: CheckoutFormErrors = {}
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
   if (!values.fullName.trim()) {
     errors.fullName = 'El nombre es obligatorio'
@@ -30,6 +31,8 @@ function validate(values: CheckoutFormValues): CheckoutFormErrors {
 
   if (!values.email.trim()) {
     errors.email = 'El email es obligatorio'
+  } else if (!emailPattern.test(values.email.trim())) {
+    errors.email = 'Ingresa un email válido'
   }
 
   if (!values.phoneNumber.trim()) {
@@ -50,8 +53,6 @@ export function CheckoutForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [orderCreatedAt, setOrderCreatedAt] = useState<number | null>(null)
 
-  const hasErrors = useMemo(() => Object.keys(errors).length > 0, [errors])
-
   const handleChange = (
     field: keyof CheckoutFormValues,
     value: CheckoutFormValues[keyof CheckoutFormValues],
@@ -70,6 +71,10 @@ export function CheckoutForm() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
+    if (isLoading) {
+      return
+    }
+
     const formErrors = validate(values)
     setErrors(formErrors)
 
@@ -83,14 +88,12 @@ export function CheckoutForm() {
     const createdAt = Date.now()
 
     setActiveOrder({
-      id: crypto.randomUUID(),
       customer_name: values.fullName,
       customer_email: values.email,
       customer_phone: values.phoneNumber,
       delivery_address: values.deliveryAddress,
       reference_notes: values.referenceNotes.trim() || undefined,
       status: 'Pending',
-      created_at: createdAt,
     })
 
     setOrderCreatedAt(createdAt)
@@ -213,7 +216,7 @@ export function CheckoutForm() {
 
         <button
           type="submit"
-          disabled={isLoading || hasErrors}
+          disabled={isLoading}
           className="w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isLoading ? 'Procesando...' : 'Confirmar Pedido (Simular Pago)'}

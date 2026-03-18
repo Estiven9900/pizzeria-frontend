@@ -34,7 +34,6 @@ export function OrderSummary({
       id: orderId ?? crypto.randomUUID(),
       customer_name: customerName,
       status: 'Pending',
-      created_at: new Date(),
     })
   }
 
