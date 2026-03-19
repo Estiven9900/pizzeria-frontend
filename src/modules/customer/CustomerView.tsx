@@ -1,5 +1,8 @@
+import { ShoppingCart } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { pizzas, productConfigs, sizes } from '../../data/mockData'
 import { useOrderStore } from '../../store/useOrderStore'
+import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
 
 const pizzaImages: Record<string, string> = {
@@ -14,38 +17,40 @@ const pizzaImages: Record<string, string> = {
 }
 
 export function CustomerView() {
-  const addToCart = useOrderStore((state) => state.addToCart)
-  const setActiveOrder = useOrderStore((state) => state.setActiveOrder)
+  const cart = useOrderStore((state) => state.cart)
+  const [isCartOpen, setIsCartOpen] = useState(false)
 
-  const handleOrder = (
-    pizzaId: string,
-    pizzaName: string,
-    sizeId: string,
-    sizeName: string,
-    price: number,
-  ) => {
-    addToCart({
-      pizzaId,
-      name: pizzaName,
-      sizeId,
-      sizeName,
-      price,
-      quantity: 1,
-    })
+  const totalItems = useMemo(() => {
+    return cart.reduce((sum, item) => sum + item.quantity, 0)
+  }, [cart])
 
-    setActiveOrder({
-      customer_name: 'Cliente',
-      status: 'Pending',
-    })
+  const handleOpenCart = () => {
+    setIsCartOpen(true)
+  }
 
-    console.info(`Pedido confirmado para ${pizzaName}`)
+  const handleCloseCart = () => {
+    setIsCartOpen(false)
   }
 
   return (
     <section className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-bold text-gray-900">Elige tu pizza</h2>
-        <p className="text-sm text-gray-600">Selecciona tamaño y pulsa Pedir</p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Elige tu pizza</h2>
+          <p className="text-sm text-gray-600">Selecciona tamaño y agrégala al carrito</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleOpenCart}
+          className="relative rounded-full border border-gray-300 bg-white p-2.5 text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+          aria-label="Abrir carrito"
+        >
+          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+          <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-semibold text-white">
+            {totalItems}
+          </span>
+        </button>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -56,18 +61,15 @@ export function CustomerView() {
             sizes={sizes}
             productConfigs={productConfigs}
             imageUrl={pizzaImages[pizza.id] ?? '/hero.png'}
-            onOrder={({ pizza: selectedPizza, size, total }) =>
-              handleOrder(
-                selectedPizza.id,
-                selectedPizza.name,
-                size.id,
-                size.name,
-                total,
-              )
-            }
           />
         ))}
       </div>
+
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={handleCloseCart}
+        onGoToCheckout={handleCloseCart}
+      />
     </section>
   )
 }

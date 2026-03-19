@@ -17,11 +17,13 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
 
 interface OrderStore {
   cart: CartItem[]
+  totalPrice: number
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
   addToCart: (item: CartItem) => void
-  removeFromCart: (pizzaId: string, sizeId: string) => void
+  removeFromCart: (cartItemId: string) => void
+  updateQuantity: (cartItemId: string, delta: number) => void
   clearCart: () => void
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
   setOrderStatus: (status: OrderStatus) => void
@@ -30,9 +32,9 @@ interface OrderStore {
 }
 
 export interface CartItem {
-  pizzaId: string
-  name: string
-  sizeId: string
+  cartItemId: string
+  productConfigId: string
+  pizzaName: string
   sizeName: string
   price: number
   quantity: number
@@ -98,46 +100,77 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
   return {
     cart: [],
+    totalPrice: 0,
     activeOrder: null,
     timeRemaining: ORDER_LOCK_TIME_SECONDS,
     isLocked: false,
     addToCart: (item) => {
       set((state) => {
         const existingItem = state.cart.find(
-          (cartItem) =>
-            cartItem.pizzaId === item.pizzaId && cartItem.sizeId === item.sizeId,
+          (cartItem) => cartItem.productConfigId === item.productConfigId,
         )
 
         if (!existingItem) {
-          return { cart: [...state.cart, item] }
+          const nextCart = [...state.cart, item]
+
+          return {
+            cart: nextCart,
+            totalPrice: calculateOrderTotal(nextCart),
+          }
         }
 
-        return {
-          cart: state.cart.map((cartItem) => {
-            if (
-              cartItem.pizzaId === item.pizzaId &&
-              cartItem.sizeId === item.sizeId
-            ) {
-              return {
-                ...cartItem,
-                quantity: cartItem.quantity + item.quantity,
-              }
+        const nextCart = state.cart.map((cartItem) => {
+          if (cartItem.productConfigId === item.productConfigId) {
+            return {
+              ...cartItem,
+              quantity: cartItem.quantity + item.quantity,
             }
+          }
 
-            return cartItem
-          }),
+          return cartItem
+        })
+
+        return {
+          cart: nextCart,
+          totalPrice: calculateOrderTotal(nextCart),
         }
       })
     },
-    removeFromCart: (pizzaId, sizeId) => {
-      set((state) => ({
-        cart: state.cart.filter(
-          (item) => !(item.pizzaId === pizzaId && item.sizeId === sizeId),
-        ),
-      }))
+    removeFromCart: (cartItemId) => {
+      set((state) => {
+        const nextCart = state.cart.filter(
+          (item) => item.cartItemId !== cartItemId,
+        )
+
+        return {
+          cart: nextCart,
+          totalPrice: calculateOrderTotal(nextCart),
+        }
+      })
+    },
+    updateQuantity: (cartItemId, delta) => {
+      set((state) => {
+        const nextCart = state.cart
+          .map((item) => {
+            if (item.cartItemId !== cartItemId) {
+              return item
+            }
+
+            return {
+              ...item,
+              quantity: item.quantity + delta,
+            }
+          })
+          .filter((item) => item.quantity > 0)
+
+        return {
+          cart: nextCart,
+          totalPrice: calculateOrderTotal(nextCart),
+        }
+      })
     },
     clearCart: () => {
-      set({ cart: [] })
+      set({ cart: [], totalPrice: 0 })
     },
     setActiveOrder: (orderData) => {
       const currentOrder = get().activeOrder

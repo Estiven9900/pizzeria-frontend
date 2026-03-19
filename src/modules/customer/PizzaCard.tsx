@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Pizza, ProductConfig, Size } from '../../types'
+import { useOrderStore } from '../../store/useOrderStore'
 
 interface OrderSelection {
+  productConfigId: string
   pizza: Pizza
   size: Size
   total: number
@@ -36,6 +38,7 @@ export function PizzaCard({
   locale = 'es-ES',
   currency = 'EUR',
 }: PizzaCardProps) {
+  const addToCart = useOrderStore((state) => state.addToCart)
   const pizzaConfigs = useMemo(() => {
     return productConfigs.filter((config) => config.pizzaId === pizza.id)
   }, [pizza.id, productConfigs])
@@ -58,6 +61,21 @@ export function PizzaCard({
   }, [availableSizes, defaultSizeId])
 
   const [selectedSizeId, setSelectedSizeId] = useState(initialSizeId ?? '')
+  const [showAddedToast, setShowAddedToast] = useState(false)
+
+  useEffect(() => {
+    if (!showAddedToast) {
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      setShowAddedToast(false)
+    }, 1200)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [showAddedToast])
 
   const selectedConfig = useMemo(() => {
     return (
@@ -88,7 +106,19 @@ export function PizzaCard({
       return
     }
 
+    addToCart({
+      cartItemId: crypto.randomUUID(),
+      productConfigId: `${selectedConfig.pizzaId}-${selectedConfig.sizeId}`,
+      pizzaName: pizza.name,
+      sizeName: selectedSize.name,
+      price: selectedConfig.price,
+      quantity: 1,
+    })
+
+    setShowAddedToast(true)
+
     onOrder?.({
+      productConfigId: `${selectedConfig.pizzaId}-${selectedConfig.sizeId}`,
       pizza,
       size: selectedSize,
       total: selectedConfig.price,
@@ -140,14 +170,25 @@ export function PizzaCard({
           </div>
         </fieldset>
 
-        <button
-          type="button"
-          onClick={handleOrder}
-          disabled={!selectedConfig || !selectedSize}
-          className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Pedir
-        </button>
+        <div className="relative">
+          <button
+            type="button"
+            onClick={handleOrder}
+            disabled={!selectedConfig || !selectedSize}
+            className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Agregar al Carrito
+          </button>
+
+          <p
+            className={`pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded-full bg-green-100 px-2.5 py-1 text-xs font-medium text-green-700 transition-all duration-300 ${
+              showAddedToast ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'
+            }`}
+            aria-hidden={!showAddedToast}
+          >
+            Agregado al carrito
+          </p>
+        </div>
       </div>
     </article>
   )
