@@ -17,14 +17,16 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
 
 interface OrderStore {
   cart: CartItem[]
-  totalPrice: number
+  isCartOpen: boolean
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
   addToCart: (item: CartItem) => void
   removeFromCart: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, delta: number) => void
+  toggleCart: () => void
   clearCart: () => void
+  getTotalPrice: () => number
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
   setOrderStatus: (status: OrderStatus) => void
   clearActiveOrder: () => void
@@ -34,7 +36,7 @@ interface OrderStore {
 export interface CartItem {
   cartItemId: string
   productConfigId: string
-  pizzaName: string
+  name: string
   sizeName: string
   price: number
   quantity: number
@@ -100,7 +102,7 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
   return {
     cart: [],
-    totalPrice: 0,
+    isCartOpen: false,
     activeOrder: null,
     timeRemaining: ORDER_LOCK_TIME_SECONDS,
     isLocked: false,
@@ -115,7 +117,6 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
           return {
             cart: nextCart,
-            totalPrice: calculateOrderTotal(nextCart),
           }
         }
 
@@ -132,7 +133,6 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         return {
           cart: nextCart,
-          totalPrice: calculateOrderTotal(nextCart),
         }
       })
     },
@@ -144,7 +144,6 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         return {
           cart: nextCart,
-          totalPrice: calculateOrderTotal(nextCart),
         }
       })
     },
@@ -165,12 +164,17 @@ export const useOrderStore = create<OrderStore>((set, get) => {
 
         return {
           cart: nextCart,
-          totalPrice: calculateOrderTotal(nextCart),
         }
       })
     },
+    toggleCart: () => {
+      set((state) => ({ isCartOpen: !state.isCartOpen }))
+    },
     clearCart: () => {
-      set({ cart: [], totalPrice: 0 })
+      set({ cart: [] })
+    },
+    getTotalPrice: () => {
+      return calculateOrderTotal(get().cart)
     },
     setActiveOrder: (orderData) => {
       const currentOrder = get().activeOrder

@@ -109,7 +109,7 @@ export function PizzaCard({
     addToCart({
       cartItemId: crypto.randomUUID(),
       productConfigId: `${selectedConfig.pizzaId}-${selectedConfig.sizeId}`,
-      pizzaName: pizza.name,
+      name: pizza.name,
       sizeName: selectedSize.name,
       price: selectedConfig.price,
       quantity: 1,

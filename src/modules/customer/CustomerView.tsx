@@ -1,5 +1,5 @@
 import { ShoppingCart } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { pizzas, productConfigs, sizes } from '../../data/mockData'
 import { useOrderStore } from '../../store/useOrderStore'
 import { CartDrawer } from './CartDrawer'
@@ -18,18 +18,17 @@ const pizzaImages: Record<string, string> = {
 
 export function CustomerView() {
   const cart = useOrderStore((state) => state.cart)
-  const [isCartOpen, setIsCartOpen] = useState(false)
+  const isCartOpen = useOrderStore((state) => state.isCartOpen)
+  const toggleCart = useOrderStore((state) => state.toggleCart)
 
   const totalItems = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity, 0)
   }, [cart])
 
   const handleOpenCart = () => {
-    setIsCartOpen(true)
-  }
-
-  const handleCloseCart = () => {
-    setIsCartOpen(false)
+    if (!isCartOpen) {
+      toggleCart()
+    }
   }
 
   return (
@@ -65,11 +64,7 @@ export function CustomerView() {
         ))}
       </div>
 
-      <CartDrawer
-        isOpen={isCartOpen}
-        onClose={handleCloseCart}
-        onGoToCheckout={handleCloseCart}
-      />
+      <CartDrawer />
     </section>
   )
 }
