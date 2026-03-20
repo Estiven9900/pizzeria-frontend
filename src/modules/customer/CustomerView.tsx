@@ -3,6 +3,7 @@ import { useMemo } from 'react'
 import { pizzas, productConfigs, sizes } from '../../data/mockData'
 import { useOrderStore } from '../../store/useOrderStore'
 import { CartDrawer } from './CartDrawer'
+import { DebugCart } from './DebugCart'
 import { PizzaCard } from './PizzaCard'
 
 const pizzaImages: Record<string, string> = {
@@ -63,6 +64,8 @@ export function CustomerView() {
           />
         ))}
       </div>
+
+      <DebugCart />
 
       <CartDrawer />
     </section>

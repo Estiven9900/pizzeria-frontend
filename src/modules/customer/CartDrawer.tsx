@@ -47,7 +47,7 @@ export function CartDrawer() {
 
   return (
     <div
-      className={`fixed inset-0 z-40 transition ${
+      className={`fixed inset-0 z-50 transition ${
         isCartOpen ? 'pointer-events-auto' : 'pointer-events-none'
       }`}
       aria-hidden={!isCartOpen}
@@ -62,13 +62,13 @@ export function CartDrawer() {
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Tu Pedido"
+        aria-label="Mi Carrito"
         className={`absolute right-0 top-0 flex h-full w-full max-w-md flex-col bg-white shadow-xl transition-transform duration-300 ease-in-out ${
           isCartOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
         <header className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Tu Pedido</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Mi Carrito</h2>
           <button
             type="button"
             onClick={toggleCart}
@@ -92,7 +92,7 @@ export function CartDrawer() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate font-bold text-gray-900">
-                        {item.name} · {item.sizeName}
+                        {item.name} - {item.sizeName}
                       </p>
                     </div>
                     <button
@@ -139,8 +139,14 @@ export function CartDrawer() {
         </div>
 
         <footer className="mt-auto border-t border-gray-200 bg-white px-5 py-4">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-sm font-medium text-gray-600">Subtotal</span>
+            <span className="text-base font-semibold text-gray-900">
+              {formatPrice(totalPrice, locale, currency)}
+            </span>
+          </div>
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-sm text-gray-600">Total a pagar</span>
+            <span className="text-sm font-medium text-gray-700">Total</span>
             <span className="text-lg font-bold text-gray-900">
               {formatPrice(totalPrice, locale, currency)}
             </span>
@@ -155,7 +161,7 @@ export function CartDrawer() {
                 : 'bg-red-600 hover:bg-red-700'
             }`}
           >
-            Finalizar Compra
+            Ir al Checkout
           </Link>
         </footer>
       </aside>

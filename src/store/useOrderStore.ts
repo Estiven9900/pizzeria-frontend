@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
@@ -18,6 +19,7 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
 interface OrderStore {
   cart: CartItem[]
   isCartOpen: boolean
+  hasHydrated: boolean
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
@@ -25,6 +27,7 @@ interface OrderStore {
   removeFromCart: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, delta: number) => void
   toggleCart: () => void
+  setHasHydrated: (value: boolean) => void
   clearCart: () => void
   getTotalPrice: () => number
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
@@ -78,158 +81,174 @@ const stopCountdown = () => {
   countdownTimer = null
 }
 
-export const useOrderStore = create<OrderStore>((set, get) => {
-  const refreshOrderLock = () => {
-    const order = get().activeOrder
+export const useOrderStore = create<OrderStore>()(
+  persist(
+    (set, get) => {
+      const refreshOrderLock = () => {
+        const order = get().activeOrder
 
-    if (!order) {
-      set({ timeRemaining: ORDER_LOCK_TIME_SECONDS, isLocked: false })
-      stopCountdown()
-      return
-    }
+        if (!order) {
+          set({ timeRemaining: ORDER_LOCK_TIME_SECONDS, isLocked: false })
+          stopCountdown()
+          return
+        }
 
-    const timeRemaining = calculateRemainingSeconds(
-      getCreatedAtTimestamp(order.created_at),
-    )
-    const isLocked = timeRemaining === 0
-
-    set({ timeRemaining, isLocked })
-
-    if (isLocked) {
-      stopCountdown()
-    }
-  }
-
-  return {
-    cart: [],
-    isCartOpen: false,
-    activeOrder: null,
-    timeRemaining: ORDER_LOCK_TIME_SECONDS,
-    isLocked: false,
-    addToCart: (item) => {
-      set((state) => {
-        const existingItem = state.cart.find(
-          (cartItem) => cartItem.productConfigId === item.productConfigId,
+        const timeRemaining = calculateRemainingSeconds(
+          getCreatedAtTimestamp(order.created_at),
         )
+        const isLocked = timeRemaining === 0
 
-        if (!existingItem) {
-          const nextCart = [...state.cart, item]
+        set({ timeRemaining, isLocked })
 
-          return {
-            cart: nextCart,
-          }
+        if (isLocked) {
+          stopCountdown()
         }
-
-        const nextCart = state.cart.map((cartItem) => {
-          if (cartItem.productConfigId === item.productConfigId) {
-            return {
-              ...cartItem,
-              quantity: cartItem.quantity + item.quantity,
-            }
-          }
-
-          return cartItem
-        })
-
-        return {
-          cart: nextCart,
-        }
-      })
-    },
-    removeFromCart: (cartItemId) => {
-      set((state) => {
-        const nextCart = state.cart.filter(
-          (item) => item.cartItemId !== cartItemId,
-        )
-
-        return {
-          cart: nextCart,
-        }
-      })
-    },
-    updateQuantity: (cartItemId, delta) => {
-      set((state) => {
-        const nextCart = state.cart
-          .map((item) => {
-            if (item.cartItemId !== cartItemId) {
-              return item
-            }
-
-            return {
-              ...item,
-              quantity: item.quantity + delta,
-            }
-          })
-          .filter((item) => item.quantity > 0)
-
-        return {
-          cart: nextCart,
-        }
-      })
-    },
-    toggleCart: () => {
-      set((state) => ({ isCartOpen: !state.isCartOpen }))
-    },
-    clearCart: () => {
-      set({ cart: [] })
-    },
-    getTotalPrice: () => {
-      return calculateOrderTotal(get().cart)
-    },
-    setActiveOrder: (orderData) => {
-      const currentOrder = get().activeOrder
-      const currentCart = get().cart
-      const createdAt = Date.now()
-      const total = calculateOrderTotal(currentCart)
-
-      set({
-        activeOrder: {
-          id: orderData?.id ?? currentOrder?.id ?? crypto.randomUUID(),
-          customer_name:
-            orderData?.customer_name ?? currentOrder?.customer_name ?? 'Cliente',
-          customer_email:
-            orderData?.customer_email ?? currentOrder?.customer_email,
-          customer_phone:
-            orderData?.customer_phone ?? currentOrder?.customer_phone,
-          delivery_address:
-            orderData?.delivery_address ?? currentOrder?.delivery_address,
-          reference_notes:
-            orderData?.reference_notes ?? currentOrder?.reference_notes,
-          status: orderData?.status ?? 'Pending',
-          total,
-          cart: currentCart,
-          created_at: createdAt,
-        },
-      })
-      refreshOrderLock()
-
-      stopCountdown()
-      countdownTimer = setInterval(() => {
-        refreshOrderLock()
-      }, 1000)
-    },
-    setOrderStatus: (status) => {
-      const order = get().activeOrder
-
-      if (!order) {
-        return
       }
 
-      set({
-        activeOrder: {
-          ...order,
-          status,
-        },
-      })
-    },
-    clearActiveOrder: () => {
-      stopCountdown()
-      set({
+      return {
+        cart: [],
+        isCartOpen: false,
+        hasHydrated: false,
         activeOrder: null,
         timeRemaining: ORDER_LOCK_TIME_SECONDS,
         isLocked: false,
-      })
+        addToCart: (item) => {
+          set((state) => {
+            const existingItem = state.cart.find(
+              (cartItem) => cartItem.productConfigId === item.productConfigId,
+            )
+
+            if (!existingItem) {
+              const nextCart = [...state.cart, item]
+
+              return {
+                cart: nextCart,
+              }
+            }
+
+            const nextCart = state.cart.map((cartItem) => {
+              if (cartItem.productConfigId === item.productConfigId) {
+                return {
+                  ...cartItem,
+                  quantity: cartItem.quantity + item.quantity,
+                }
+              }
+
+              return cartItem
+            })
+
+            return {
+              cart: nextCart,
+            }
+          })
+        },
+        removeFromCart: (cartItemId) => {
+          set((state) => {
+            const nextCart = state.cart.filter(
+              (item) => item.cartItemId !== cartItemId,
+            )
+
+            return {
+              cart: nextCart,
+            }
+          })
+        },
+        updateQuantity: (cartItemId, delta) => {
+          set((state) => {
+            const nextCart = state.cart
+              .map((item) => {
+                if (item.cartItemId !== cartItemId) {
+                  return item
+                }
+
+                return {
+                  ...item,
+                  quantity: item.quantity + delta,
+                }
+              })
+              .filter((item) => item.quantity > 0)
+
+            return {
+              cart: nextCart,
+            }
+          })
+        },
+        toggleCart: () => {
+          set((state) => ({ isCartOpen: !state.isCartOpen }))
+        },
+        setHasHydrated: (value) => {
+          set({ hasHydrated: value })
+        },
+        clearCart: () => {
+          set({ cart: [] })
+        },
+        getTotalPrice: () => {
+          return calculateOrderTotal(get().cart)
+        },
+        setActiveOrder: (orderData) => {
+          const currentOrder = get().activeOrder
+          const currentCart = get().cart
+          const createdAt = Date.now()
+          const total = calculateOrderTotal(currentCart)
+
+          set({
+            activeOrder: {
+              id: orderData?.id ?? currentOrder?.id ?? crypto.randomUUID(),
+              customer_name:
+                orderData?.customer_name ?? currentOrder?.customer_name ?? 'Cliente',
+              customer_email:
+                orderData?.customer_email ?? currentOrder?.customer_email,
+              customer_phone:
+                orderData?.customer_phone ?? currentOrder?.customer_phone,
+              delivery_address:
+                orderData?.delivery_address ?? currentOrder?.delivery_address,
+              reference_notes:
+                orderData?.reference_notes ?? currentOrder?.reference_notes,
+              status: orderData?.status ?? 'Pending',
+              total,
+              cart: currentCart,
+              created_at: createdAt,
+            },
+          })
+          refreshOrderLock()
+
+          stopCountdown()
+          countdownTimer = setInterval(() => {
+            refreshOrderLock()
+          }, 1000)
+        },
+        setOrderStatus: (status) => {
+          const order = get().activeOrder
+
+          if (!order) {
+            return
+          }
+
+          set({
+            activeOrder: {
+              ...order,
+              status,
+            },
+          })
+        },
+        clearActiveOrder: () => {
+          stopCountdown()
+          set({
+            activeOrder: null,
+            timeRemaining: ORDER_LOCK_TIME_SECONDS,
+            isLocked: false,
+          })
+        },
+        refreshOrderLock,
+      }
     },
-    refreshOrderLock,
-  }
-})
+    {
+      name: 'pizzaclick-storage',
+      skipHydration: typeof window === 'undefined',
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
+      partialize: (state) => ({ cart: state.cart }),
+    },
+  ),
+)

@@ -1,21 +1,24 @@
-import { OrderTimer } from './components/OrderTimer';
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { CheckoutForm } from './modules/customer/CheckoutForm'
+import { CustomerView } from './modules/customer/CustomerView'
 
 function App() {
-  const mockCreatedAt = Date.now();
-
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <header className="mb-8">
         <h1 className="text-4xl font-bold text-red-600">PizzaClick OS</h1>
-        <p className="text-gray-600">Panel de Control - Modo Desarrollo</p>
+        <p className="text-gray-600">Experiencia de Cliente</p>
       </header>
 
-      <main className="max-w-md bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-xl font-semibold mb-4">Estado del Pedido</h2>
-        <OrderTimer createdAt={mockCreatedAt} />
+      <main className="mx-auto w-full max-w-6xl">
+        <Routes>
+          <Route path="/" element={<CustomerView />} />
+          <Route path="/checkout" element={<CheckoutForm />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   )
 }
 
-export default App;
+export default App
