@@ -2,6 +2,7 @@ import { CheckCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { OrderTimer } from '../../components/OrderTimer'
 import { useOrderStore } from '../../store/useOrderStore'
+import { formatPrice } from '../../utils/formatPrice'
 
 interface CartItem {
   id: string
@@ -23,14 +24,6 @@ interface PostPurchaseViewProps {
   locale?: string
   currency?: string
   onEditOrder?: () => void
-}
-
-function formatPrice(amount: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount)
 }
 
 function getTimestamp(value: Date | string | number | undefined): number {

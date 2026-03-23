@@ -181,6 +181,10 @@ export const useOrderStore = create<OrderStore>()(
         },
         clearCart: () => {
           set({ cart: [] })
+
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('pizzaclick-order-storage')
+          }
         },
         getTotalPrice: () => {
           return calculateOrderTotal(get().cart)
@@ -243,11 +247,12 @@ export const useOrderStore = create<OrderStore>()(
       }
     },
     {
-      name: 'pizzaclick-storage',
+      name: 'pizzaclick-order-storage',
       skipHydration: typeof window === 'undefined',
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true)
       },
+      // Para verificar en Chrome DevTools: Application -> Local Storage -> busca la clave "pizzaclick-order-storage".
       partialize: (state) => ({ cart: state.cart }),
     },
   ),

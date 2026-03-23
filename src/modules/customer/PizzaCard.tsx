@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Pizza, ProductConfig, Size } from '../../types'
 import { useOrderStore } from '../../store/useOrderStore'
+import { formatPrice } from '../../utils/formatPrice'
 
 interface OrderSelection {
   productConfigId: string
@@ -18,14 +19,6 @@ interface PizzaCardProps {
   onOrder?: (selection: OrderSelection) => void
   locale?: string
   currency?: string
-}
-
-function formatPrice(amount: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount)
 }
 
 export function PizzaCard({

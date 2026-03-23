@@ -2,14 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
-
-function formatPrice(amount: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount)
-}
+import { formatPrice } from '../../utils/formatPrice'
 
 export function CartDrawer() {
   const isCartOpen = useOrderStore((state) => state.isCartOpen)

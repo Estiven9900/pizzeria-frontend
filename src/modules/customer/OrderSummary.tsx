@@ -1,4 +1,5 @@
 import { useOrderStore } from '../../store/useOrderStore'
+import { formatPrice } from '../../utils/formatPrice'
 
 interface OrderSummaryProps {
   pizzaName: string
@@ -8,14 +9,6 @@ interface OrderSummaryProps {
   orderId?: string
   locale?: string
   currency?: string
-}
-
-function formatPrice(amount: number, locale: string, currency: string): string {
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(amount)
 }
 
 export function OrderSummary({
