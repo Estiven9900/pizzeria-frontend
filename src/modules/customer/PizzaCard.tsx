@@ -101,7 +101,7 @@ export function PizzaCard({
 
     addToCart({
       cartItemId: crypto.randomUUID(),
-      productConfigId: `${selectedConfig.pizzaId}-${selectedConfig.sizeId}`,
+      productConfigId: selectedConfig.id,
       name: pizza.name,
       sizeName: selectedSize.name,
       price: selectedConfig.price,
@@ -111,7 +111,7 @@ export function PizzaCard({
     setShowAddedToast(true)
 
     onOrder?.({
-      productConfigId: `${selectedConfig.pizzaId}-${selectedConfig.sizeId}`,
+      productConfigId: selectedConfig.id,
       pizza,
       size: selectedSize,
       total: selectedConfig.price,

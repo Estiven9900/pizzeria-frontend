@@ -1,6 +1,5 @@
 import { ShoppingCart } from 'lucide-react'
-import { useMemo } from 'react'
-import { pizzas, productConfigs, sizes } from '../../data/mockData'
+import { useEffect, useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
 import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
@@ -20,6 +19,16 @@ export function CustomerView() {
   const cart = useOrderStore((state) => state.cart)
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
   const toggleCart = useOrderStore((state) => state.toggleCart)
+  const { pizzas, sizes, productConfigs } = useOrderStore((state) => state.availableProducts)
+  const isLoadingProducts = useOrderStore((state) => state.isLoadingProducts)
+  const productsError = useOrderStore((state) => state.productsError)
+  const fetchProducts = useOrderStore((state) => state.fetchProducts)
+
+  useEffect(() => {
+    if (pizzas.length === 0) {
+      void fetchProducts()
+    }
+  }, [pizzas.length, fetchProducts])
 
   const totalItems = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -52,17 +61,36 @@ export function CustomerView() {
         </button>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {pizzas.map((pizza) => (
-          <PizzaCard
-            key={pizza.id}
-            pizza={pizza}
-            sizes={sizes}
-            productConfigs={productConfigs}
-            imageUrl={pizzaImages[pizza.id] ?? '/hero.png'}
-          />
-        ))}
-      </div>
+      {isLoadingProducts && (
+        <p className="py-12 text-center text-gray-500">Cargando catálogo…</p>
+      )}
+
+      {productsError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
+          <p className="text-sm text-red-700">{productsError}</p>
+          <button
+            type="button"
+            onClick={() => void fetchProducts()}
+            className="mt-2 text-sm font-medium text-red-600 underline hover:text-red-800"
+          >
+            Reintentar
+          </button>
+        </div>
+      )}
+
+      {!isLoadingProducts && !productsError && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {pizzas.map((pizza) => (
+            <PizzaCard
+              key={pizza.id}
+              pizza={pizza}
+              sizes={sizes}
+              productConfigs={productConfigs}
+              imageUrl={pizza.imageUrl ?? pizzaImages[pizza.id] ?? '/hero.png'}
+            />
+          ))}
+        </div>
+      )}
 
       <CartDrawer />
     </section>

@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+import { fetchProductsCatalog } from '../services/api'
+import type { Pizza, ProductConfig, Size } from '../types'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
 
@@ -17,12 +19,20 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
 }
 
 interface OrderStore {
+  availableProducts: {
+    pizzas: Pizza[]
+    sizes: Size[]
+    productConfigs: ProductConfig[]
+  }
+  isLoadingProducts: boolean
+  productsError: string | null
   cart: CartItem[]
   isCartOpen: boolean
   hasHydrated: boolean
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
+  fetchProducts: () => Promise<void>
   addToCart: (item: CartItem) => void
   removeFromCart: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, delta: number) => void
@@ -106,12 +116,25 @@ export const useOrderStore = create<OrderStore>()(
       }
 
       return {
+        availableProducts: { pizzas: [], sizes: [], productConfigs: [] },
+        isLoadingProducts: false,
+        productsError: null,
         cart: [],
         isCartOpen: false,
         hasHydrated: false,
         activeOrder: null,
         timeRemaining: ORDER_LOCK_TIME_SECONDS,
         isLocked: false,
+        fetchProducts: async () => {
+          set({ isLoadingProducts: true, productsError: null })
+          try {
+            const data = await fetchProductsCatalog()
+            set({ availableProducts: data, isLoadingProducts: false })
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Error al cargar productos'
+            set({ productsError: message, isLoadingProducts: false })
+          }
+        },
         addToCart: (item) => {
           set((state) => {
             const existingItem = state.cart.find(
