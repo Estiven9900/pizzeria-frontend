@@ -109,7 +109,7 @@ export function CartDrawer() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate font-bold text-gray-900">
-                        {item.name} - {item.sizeName}
+                        {item.displayName}
                       </p>
                       <ReservationTimer item={item} />
                     </div>
@@ -117,7 +117,7 @@ export function CartDrawer() {
                       type="button"
                       onClick={() => removeFromCart(item.cartItemId)}
                       className="rounded-md p-1.5 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
-                      aria-label={`Eliminar ${item.name}`}
+                      aria-label={`Eliminar ${item.displayName}`}
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
                     </button>
@@ -133,7 +133,7 @@ export function CartDrawer() {
                         type="button"
                         onClick={() => updateQuantity(item.cartItemId, -1)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200"
-                        aria-label={`Disminuir cantidad de ${item.name}`}
+                        aria-label={`Disminuir cantidad de ${item.displayName}`}
                       >
                         <Minus className="h-4 w-4" aria-hidden="true" />
                       </button>
@@ -144,7 +144,7 @@ export function CartDrawer() {
                         type="button"
                         onClick={() => updateQuantity(item.cartItemId, 1)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-gray-100 text-gray-700 transition-colors hover:bg-gray-200"
-                        aria-label={`Aumentar cantidad de ${item.name}`}
+                        aria-label={`Aumentar cantidad de ${item.displayName}`}
                       >
                         <Plus className="h-4 w-4" aria-hidden="true" />
                       </button>

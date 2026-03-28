@@ -1,32 +1,19 @@
-import type { Pizza, ProductConfig, Size } from '../types'
+import type { ProductConfig } from '../types'
 
-export const pizzas: Pizza[] = [
-  { id: 'pepperoni', name: 'Pepperoni' },
-  { id: 'margherita', name: 'Margherita' },
-  { id: 'hawaiian', name: 'Hawaiian' },
-  { id: 'veggie', name: 'Veggie' },
-]
+export const products: ProductConfig[] = [
+  { id: 'pepperoni-small', pizzaId: 'pepperoni', pizzaName: 'Pepperoni', sizeName: 'Small', price: 11.5, isAvailable: true },
+  { id: 'pepperoni-medium', pizzaId: 'pepperoni', pizzaName: 'Pepperoni', sizeName: 'Medium', price: 14.5, isAvailable: true },
+  { id: 'pepperoni-large', pizzaId: 'pepperoni', pizzaName: 'Pepperoni', sizeName: 'Large', price: 17.5, isAvailable: false },
 
-export const sizes: Size[] = [
-  { id: 'small', name: 'Small' },
-  { id: 'medium', name: 'Medium' },
-  { id: 'large', name: 'Large' },
-]
+  { id: 'margherita-small', pizzaId: 'margherita', pizzaName: 'Margherita', sizeName: 'Small', price: 10.5, isAvailable: true },
+  { id: 'margherita-medium', pizzaId: 'margherita', pizzaName: 'Margherita', sizeName: 'Medium', price: 13.5, isAvailable: true },
+  { id: 'margherita-large', pizzaId: 'margherita', pizzaName: 'Margherita', sizeName: 'Large', price: 16.5, isAvailable: true },
 
-export const productConfigs: ProductConfig[] = [
-  { id: 'pepperoni-small', pizzaId: 'pepperoni', sizeId: 'small', price: 11.5, is_available: true },
-  { id: 'pepperoni-medium', pizzaId: 'pepperoni', sizeId: 'medium', price: 14.5, is_available: true },
-  { id: 'pepperoni-large', pizzaId: 'pepperoni', sizeId: 'large', price: 17.5, is_available: false },
+  { id: 'hawaiian-small', pizzaId: 'hawaiian', pizzaName: 'Hawaiian', sizeName: 'Small', price: 12, isAvailable: true },
+  { id: 'hawaiian-medium', pizzaId: 'hawaiian', pizzaName: 'Hawaiian', sizeName: 'Medium', price: 15, isAvailable: true },
+  { id: 'hawaiian-large', pizzaId: 'hawaiian', pizzaName: 'Hawaiian', sizeName: 'Large', price: 18, isAvailable: true },
 
-  { id: 'margherita-small', pizzaId: 'margherita', sizeId: 'small', price: 10.5, is_available: true },
-  { id: 'margherita-medium', pizzaId: 'margherita', sizeId: 'medium', price: 13.5, is_available: true },
-  { id: 'margherita-large', pizzaId: 'margherita', sizeId: 'large', price: 16.5, is_available: true },
-
-  { id: 'hawaiian-small', pizzaId: 'hawaiian', sizeId: 'small', price: 12, is_available: true },
-  { id: 'hawaiian-medium', pizzaId: 'hawaiian', sizeId: 'medium', price: 15, is_available: true },
-  { id: 'hawaiian-large', pizzaId: 'hawaiian', sizeId: 'large', price: 18, is_available: true },
-
-  { id: 'veggie-small', pizzaId: 'veggie', sizeId: 'small', price: 10, is_available: true },
-  { id: 'veggie-medium', pizzaId: 'veggie', sizeId: 'medium', price: 13, is_available: false },
-  { id: 'veggie-large', pizzaId: 'veggie', sizeId: 'large', price: 16, is_available: true },
+  { id: 'veggie-small', pizzaId: 'veggie', pizzaName: 'Veggie', sizeName: 'Small', price: 10, isAvailable: true },
+  { id: 'veggie-medium', pizzaId: 'veggie', pizzaName: 'Veggie', sizeName: 'Medium', price: 13, isAvailable: false },
+  { id: 'veggie-large', pizzaId: 'veggie', pizzaName: 'Veggie', sizeName: 'Large', price: 16, isAvailable: true },
 ]

@@ -1,18 +1,9 @@
-export interface Pizza {
-  id: string
-  name: string
-  imageUrl?: string
-}
-
-export interface Size {
-  id: string
-  name: string
-}
-
 export interface ProductConfig {
   id: string
-  pizzaId: Pizza['id']
-  sizeId: Size['id']
+  pizzaId: string
+  pizzaName: string
+  sizeName: string
+  imageUrl?: string
   price: number
-  is_available: boolean
+  isAvailable: boolean
 }

@@ -1,10 +1,11 @@
 import { ShoppingCart } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
+import type { ProductConfig } from '../../types'
 import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
 
-const pizzaImages: Record<string, string> = {
+const fallbackImages: Record<string, string> = {
   pepperoni:
     'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80',
   margherita:
@@ -15,20 +16,40 @@ const pizzaImages: Record<string, string> = {
     'https://images.unsplash.com/photo-1548365328-9f547fb0953e?auto=format&fit=crop&w=1200&q=80',
 }
 
+function groupByPizza(products: ProductConfig[]): ProductConfig[][] {
+  const map = new Map<string, ProductConfig[]>()
+  for (const config of products) {
+    const group = map.get(config.pizzaId) ?? []
+    group.push(config)
+    map.set(config.pizzaId, group)
+  }
+  return Array.from(map.values())
+}
+
+function withFallbackImage(configs: ProductConfig[]): ProductConfig[] {
+  if (configs.length === 0) return configs
+  if (configs[0].imageUrl) return configs
+
+  const fallback = fallbackImages[configs[0].pizzaId] ?? '/hero.png'
+  return configs.map((c) => ({ ...c, imageUrl: fallback }))
+}
+
 export function CustomerView() {
   const cart = useOrderStore((state) => state.cart)
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
   const toggleCart = useOrderStore((state) => state.toggleCart)
-  const { pizzas, sizes, productConfigs } = useOrderStore((state) => state.availableProducts)
+  const products = useOrderStore((state) => state.products)
   const isLoadingProducts = useOrderStore((state) => state.isLoadingProducts)
   const productsError = useOrderStore((state) => state.productsError)
   const fetchProducts = useOrderStore((state) => state.fetchProducts)
 
   useEffect(() => {
-    if (pizzas.length === 0) {
+    if (products.length === 0) {
       void fetchProducts()
     }
-  }, [pizzas.length, fetchProducts])
+  }, [products.length, fetchProducts])
+
+  const pizzaGroups = useMemo(() => groupByPizza(products).map(withFallbackImage), [products])
 
   const totalItems = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -80,14 +101,8 @@ export function CustomerView() {
 
       {!isLoadingProducts && !productsError && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {pizzas.map((pizza) => (
-            <PizzaCard
-              key={pizza.id}
-              pizza={pizza}
-              sizes={sizes}
-              productConfigs={productConfigs}
-              imageUrl={pizza.imageUrl ?? pizzaImages[pizza.id] ?? '/hero.png'}
-            />
+          {pizzaGroups.map((configs) => (
+            <PizzaCard key={configs[0].pizzaId} configs={configs} />
           ))}
         </div>
       )}

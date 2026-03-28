@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 import { fetchProductsCatalog, lockProduct } from '../services/api'
-import type { Pizza, ProductConfig, Size } from '../types'
+import type { ProductConfig } from '../types'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
 
@@ -19,11 +19,7 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
 }
 
 interface OrderStore {
-  availableProducts: {
-    pizzas: Pizza[]
-    sizes: Size[]
-    productConfigs: ProductConfig[]
-  }
+  products: ProductConfig[]
   isLoadingProducts: boolean
   productsError: string | null
   cart: CartItem[]
@@ -50,8 +46,7 @@ interface OrderStore {
 export interface CartItem {
   cartItemId: string
   productConfigId: string
-  name: string
-  sizeName: string
+  displayName: string
   price: number
   quantity: number
   lockedAt: number
@@ -118,7 +113,7 @@ export const useOrderStore = create<OrderStore>()(
       }
 
       return {
-        availableProducts: { pizzas: [], sizes: [], productConfigs: [] },
+        products: [],
         isLoadingProducts: false,
         productsError: null,
         cart: [],
@@ -131,7 +126,7 @@ export const useOrderStore = create<OrderStore>()(
           set({ isLoadingProducts: true, productsError: null })
           try {
             const data = await fetchProductsCatalog()
-            set({ availableProducts: data, isLoadingProducts: false })
+            set({ products: data.products, isLoadingProducts: false })
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Error al cargar productos'
             set({ productsError: message, isLoadingProducts: false })
@@ -232,11 +227,13 @@ export const useOrderStore = create<OrderStore>()(
             cart: state.cart.filter((i) => i.cartItemId !== cartItemId),
           }))
 
-          if (item) {
-            const event = new CustomEvent('pizzaclick:lock-expired', {
-              detail: { name: item.name, sizeName: item.sizeName },
-            })
-            window.dispatchEvent(event)
+          if (item && typeof window !== 'undefined') {
+            localStorage.setItem('pizzaclick-order-storage', JSON.stringify({ state: { cart: get().cart }, version: 0 }))
+            window.dispatchEvent(
+              new CustomEvent('pizzaclick:lock-expired', {
+                detail: { displayName: item.displayName },
+              }),
+            )
           }
         },
         setActiveOrder: (orderData) => {

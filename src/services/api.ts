@@ -1,11 +1,9 @@
 import axios from 'axios'
 import { ENV } from '../config/env'
-import type { Pizza, ProductConfig, Size } from '../types'
+import type { ProductConfig } from '../types'
 
 export interface ProductsResponse {
-  pizzas: Pizza[]
-  sizes: Size[]
-  productConfigs: ProductConfig[]
+  products: ProductConfig[]
 }
 
 const api = axios.create({
