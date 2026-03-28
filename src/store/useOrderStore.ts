@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { fetchProductsCatalog } from '../services/api'
+import { fetchProductsCatalog, lockProduct } from '../services/api'
 import type { Pizza, ProductConfig, Size } from '../types'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
@@ -33,13 +33,14 @@ interface OrderStore {
   timeRemaining: number
   isLocked: boolean
   fetchProducts: () => Promise<void>
-  addToCart: (item: CartItem) => void
+  addToCart: (item: CartItem) => Promise<void>
   removeFromCart: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, delta: number) => void
   toggleCart: () => void
   setHasHydrated: (value: boolean) => void
   clearCart: () => void
   getTotalPrice: () => number
+  handleLockExpiration: (cartItemId: string) => void
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
   setOrderStatus: (status: OrderStatus) => void
   clearActiveOrder: () => void
@@ -53,6 +54,7 @@ export interface CartItem {
   sizeName: string
   price: number
   quantity: number
+  lockedAt: number
 }
 
 interface SetActiveOrderInput {
@@ -135,35 +137,47 @@ export const useOrderStore = create<OrderStore>()(
             set({ productsError: message, isLoadingProducts: false })
           }
         },
-        addToCart: (item) => {
-          set((state) => {
-            const existingItem = state.cart.find(
-              (cartItem) => cartItem.productConfigId === item.productConfigId,
-            )
+        addToCart: async (item) => {
+          try {
+            const response = await lockProduct(item.productConfigId)
+            const lockedAt = new Date(response.lockedAt).getTime()
 
-            if (!existingItem) {
-              const nextCart = [...state.cart, item]
+            set((state) => {
+              const existingItem = state.cart.find(
+                (cartItem) => cartItem.productConfigId === item.productConfigId,
+              )
+
+              if (!existingItem) {
+                return { cart: [...state.cart, { ...item, lockedAt }] }
+              }
 
               return {
-                cart: nextCart,
+                cart: state.cart.map((cartItem) =>
+                  cartItem.productConfigId === item.productConfigId
+                    ? { ...cartItem, quantity: cartItem.quantity + item.quantity, lockedAt }
+                    : cartItem,
+                ),
               }
-            }
-
-            const nextCart = state.cart.map((cartItem) => {
-              if (cartItem.productConfigId === item.productConfigId) {
-                return {
-                  ...cartItem,
-                  quantity: cartItem.quantity + item.quantity,
-                }
-              }
-
-              return cartItem
             })
+          } catch {
+            set((state) => {
+              const existingItem = state.cart.find(
+                (cartItem) => cartItem.productConfigId === item.productConfigId,
+              )
 
-            return {
-              cart: nextCart,
-            }
-          })
+              if (!existingItem) {
+                return { cart: [...state.cart, item] }
+              }
+
+              return {
+                cart: state.cart.map((cartItem) =>
+                  cartItem.productConfigId === item.productConfigId
+                    ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
+                    : cartItem,
+                ),
+              }
+            })
+          }
         },
         removeFromCart: (cartItemId) => {
           set((state) => {
@@ -211,6 +225,19 @@ export const useOrderStore = create<OrderStore>()(
         },
         getTotalPrice: () => {
           return calculateOrderTotal(get().cart)
+        },
+        handleLockExpiration: (cartItemId) => {
+          const item = get().cart.find((i) => i.cartItemId === cartItemId)
+          set((state) => ({
+            cart: state.cart.filter((i) => i.cartItemId !== cartItemId),
+          }))
+
+          if (item) {
+            const event = new CustomEvent('pizzaclick:lock-expired', {
+              detail: { name: item.name, sizeName: item.sizeName },
+            })
+            window.dispatchEvent(event)
+          }
         },
         setActiveOrder: (orderData) => {
           const currentOrder = get().activeOrder

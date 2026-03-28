@@ -14,4 +14,5 @@ export interface ProductConfig {
   pizzaId: Pizza['id']
   sizeId: Size['id']
   price: number
+  is_available: boolean
 }

@@ -19,4 +19,14 @@ export async function fetchProductsCatalog(): Promise<ProductsResponse> {
   return data
 }
 
+export interface LockProductResponse {
+  locked: boolean
+  lockedAt: string
+}
+
+export async function lockProduct(configId: string): Promise<LockProductResponse> {
+  const { data } = await api.post<LockProductResponse>(`/api/products/${configId}/lock`)
+  return data
+}
+
 export default api

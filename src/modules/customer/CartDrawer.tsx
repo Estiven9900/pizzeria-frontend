@@ -1,8 +1,32 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
+import type { CartItem } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
+import { useTimer } from '../../hooks/useTimer'
+import { formatMmSs } from '../../utils/orderHelpers'
+
+function ReservationTimer({ item }: { item: CartItem }) {
+  const handleLockExpiration = useOrderStore((state) => state.handleLockExpiration)
+
+  const onExpire = useCallback(() => {
+    handleLockExpiration(item.cartItemId)
+  }, [handleLockExpiration, item.cartItemId])
+
+  const remainingMs = useTimer(item.lockedAt, onExpire)
+  const isExpiring = remainingMs > 0 && remainingMs < 2 * 60 * 1000
+
+  if (remainingMs <= 0) {
+    return null
+  }
+
+  return (
+    <p className={`mt-1 text-xs ${isExpiring ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
+      Reserva garantizada por: {formatMmSs(remainingMs)}
+    </p>
+  )
+}
 
 export function CartDrawer() {
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
@@ -87,6 +111,7 @@ export function CartDrawer() {
                       <p className="truncate font-bold text-gray-900">
                         {item.name} - {item.sizeName}
                       </p>
+                      <ReservationTimer item={item} />
                     </div>
                     <button
                       type="button"

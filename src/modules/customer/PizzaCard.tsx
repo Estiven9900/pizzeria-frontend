@@ -55,6 +55,7 @@ export function PizzaCard({
 
   const [selectedSizeId, setSelectedSizeId] = useState(initialSizeId ?? '')
   const [showAddedToast, setShowAddedToast] = useState(false)
+  const [isLocking, setIsLocking] = useState(false)
 
   useEffect(() => {
     if (!showAddedToast) {
@@ -94,20 +95,24 @@ export function PizzaCard({
     setSelectedSizeId(size.id)
   }
 
-  const handleOrder = () => {
-    if (!selectedSize || !selectedConfig) {
+  const handleOrder = async () => {
+    if (!selectedSize || !selectedConfig || !selectedConfig.is_available || isLocking) {
       return
     }
 
-    addToCart({
+    setIsLocking(true)
+
+    await addToCart({
       cartItemId: crypto.randomUUID(),
       productConfigId: selectedConfig.id,
       name: pizza.name,
       sizeName: selectedSize.name,
       price: selectedConfig.price,
       quantity: 1,
+      lockedAt: Date.now(),
     })
 
+    setIsLocking(false)
     setShowAddedToast(true)
 
     onOrder?.({
@@ -142,6 +147,8 @@ export function PizzaCard({
           <div className="flex flex-wrap gap-2">
             {availableSizes.map((size) => {
               const isSelected = size.id === selectedSize?.id
+              const config = pizzaConfigs.find((c) => c.sizeId === size.id)
+              const isSoldOut = config ? !config.is_available : false
 
               return (
                 <button
@@ -149,14 +156,17 @@ export function PizzaCard({
                   type="button"
                   role="radio"
                   aria-checked={isSelected}
+                  disabled={isSoldOut}
                   onClick={() => handleSizeChange(size)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    isSelected
-                      ? 'border-red-600 bg-red-50 text-red-700'
-                      : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                    isSoldOut
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                      : isSelected
+                        ? 'border-red-600 bg-red-50 text-red-700'
+                        : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  {size.name}
+                  {isSoldOut ? 'Agotado' : size.name}
                 </button>
               )
             })}
@@ -166,11 +176,11 @@ export function PizzaCard({
         <div className="relative">
           <button
             type="button"
-            onClick={handleOrder}
-            disabled={!selectedConfig || !selectedSize}
+            onClick={() => void handleOrder()}
+            disabled={!selectedConfig || !selectedSize || !selectedConfig.is_available || isLocking}
             className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Agregar al Carrito
+            {isLocking ? 'Reservando…' : selectedConfig && !selectedConfig.is_available ? 'Agotado' : 'Agregar al Carrito'}
           </button>
 
           <p
