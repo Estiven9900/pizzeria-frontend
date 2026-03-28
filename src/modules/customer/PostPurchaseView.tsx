@@ -2,14 +2,8 @@ import { CheckCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { OrderTimer } from '../../components/OrderTimer'
 import { useOrderStore } from '../../store/useOrderStore'
+import type { CartItem } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
-
-interface CartItem {
-  id: string
-  name: string
-  size: string
-  price: number
-}
 
 interface GoogleMapsAddress {
   address: string
@@ -18,9 +12,7 @@ interface GoogleMapsAddress {
 }
 
 interface PostPurchaseViewProps {
-  cartItems: CartItem[]
   deliveryLocation: GoogleMapsAddress
-  refundAmount: number
   locale?: string
   currency?: string
   onEditOrder?: () => void
@@ -43,9 +35,7 @@ function getTimestamp(value: Date | string | number | undefined): number {
 }
 
 export function PostPurchaseView({
-  cartItems,
   deliveryLocation,
-  refundAmount,
   locale = 'es-ES',
   currency = 'EUR',
   onEditOrder,
@@ -53,6 +43,9 @@ export function PostPurchaseView({
   const activeOrder = useOrderStore((state) => state.activeOrder)
   const setOrderStatus = useOrderStore((state) => state.setOrderStatus)
   const isLocked = useOrderStore((state) => state.isLocked)
+  const totalPrice = useOrderStore((state) => state.getTotalPrice())
+
+  const cartItems: CartItem[] = activeOrder?.cart ?? []
 
   const [orderCode] = useState(() => Math.floor(1000 + Math.random() * 9000))
   const [couponCode, setCouponCode] = useState<string | null>(null)
@@ -121,7 +114,7 @@ export function PostPurchaseView({
             <p className="text-sm font-semibold text-green-800">Cupón Generado</p>
             <p className="mt-1 text-lg font-bold tracking-wide text-green-900">{couponCode}</p>
             <p className="mt-1 text-sm text-green-800">
-              Monto a favor: {formatPrice(refundAmount, locale, currency)}
+              Monto a favor: {formatPrice(totalPrice, locale, currency)}
             </p>
             <p className="mt-1 text-xs text-green-700">
               Enviamos este código a tu email para tu próxima compra.
@@ -147,14 +140,14 @@ export function PostPurchaseView({
             <ul className="mt-2 space-y-2">
               {cartItems.map((item) => (
                 <li
-                  key={item.id}
+                  key={item.cartItemId}
                   className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm"
                 >
                   <p className="text-gray-800">
-                    {item.name} · {item.size}
+                    {item.displayName} x{item.quantity}
                   </p>
                   <p className="font-semibold text-gray-900">
-                    {formatPrice(item.price, locale, currency)}
+                    {formatPrice(item.price * item.quantity, locale, currency)}
                   </p>
                 </li>
               ))}

@@ -2,9 +2,6 @@ import { useOrderStore } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
 
 interface OrderSummaryProps {
-  pizzaName: string
-  sizeName: string
-  total: number
   customerName?: string
   orderId?: string
   locale?: string
@@ -12,14 +9,13 @@ interface OrderSummaryProps {
 }
 
 export function OrderSummary({
-  pizzaName,
-  sizeName,
-  total,
   customerName = 'Cliente',
   orderId,
   locale = 'es-ES',
   currency = 'EUR',
 }: OrderSummaryProps) {
+  const cart = useOrderStore((state) => state.cart)
+  const totalPrice = useOrderStore((state) => state.getTotalPrice())
   const setActiveOrder = useOrderStore((state) => state.setActiveOrder)
 
   const handleConfirmOrder = () => {
@@ -34,18 +30,23 @@ export function OrderSummary({
     <section className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-5 shadow-md">
       <h3 className="text-lg font-semibold text-gray-900">Resumen del pedido</h3>
 
-      <div className="mt-4 space-y-2 text-sm text-gray-700">
-        <p>
-          <span className="font-medium text-gray-900">Pizza:</span> {pizzaName}
-        </p>
-        <p>
-          <span className="font-medium text-gray-900">Tamaño:</span> {sizeName}
-        </p>
-        <p className="text-base">
-          <span className="font-semibold text-gray-900">Total:</span>{' '}
-          <span className="font-bold text-red-600">{formatPrice(total, locale, currency)}</span>
-        </p>
-      </div>
+      <ul className="mt-4 space-y-2 text-sm text-gray-700">
+        {cart.map((item) => (
+          <li key={item.cartItemId} className="flex items-center justify-between">
+            <span className="text-gray-800">
+              {item.displayName} x{item.quantity}
+            </span>
+            <span className="font-medium text-gray-900">
+              {formatPrice(item.price * item.quantity, locale, currency)}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 text-base">
+        <span className="font-semibold text-gray-900">Total:</span>{' '}
+        <span className="font-bold text-red-600">{formatPrice(totalPrice, locale, currency)}</span>
+      </p>
 
       <button
         type="button"
