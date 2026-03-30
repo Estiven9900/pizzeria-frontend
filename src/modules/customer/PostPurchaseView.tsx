@@ -2,7 +2,6 @@ import { CheckCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { OrderTimer } from '../../components/OrderTimer'
 import { useOrderStore } from '../../store/useOrderStore'
-import type { CartItem } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
 
 interface GoogleMapsAddress {
@@ -44,8 +43,22 @@ export function PostPurchaseView({
   const setOrderStatus = useOrderStore((state) => state.setOrderStatus)
   const isLocked = useOrderStore((state) => state.isLocked)
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
+  const findCatalogSize = useOrderStore((state) => state.findCatalogSize)
 
-  const cartItems: CartItem[] = activeOrder?.cart ?? []
+  const cartItems = activeOrder?.cart ?? []
+
+  const cartItemViews = useMemo(() => {
+    return cartItems.map((item) => {
+      const match = findCatalogSize(item.productConfigId)
+
+      return {
+        cartItemId: item.cartItemId,
+        displayName: match ? `${match.pizzaName} — ${match.sizeName}` : item.productConfigId,
+        price: match?.price ?? 0,
+        quantity: item.quantity,
+      }
+    })
+  }, [cartItems, findCatalogSize])
 
   const [orderCode] = useState(() => Math.floor(1000 + Math.random() * 9000))
   const [couponCode, setCouponCode] = useState<string | null>(null)
@@ -138,7 +151,7 @@ export function PostPurchaseView({
               Productos del carrito
             </h3>
             <ul className="mt-2 space-y-2">
-              {cartItems.map((item) => (
+              {cartItemViews.map((item) => (
                 <li
                   key={item.cartItemId}
                   className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm"

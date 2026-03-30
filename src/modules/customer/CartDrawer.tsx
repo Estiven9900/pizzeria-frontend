@@ -1,36 +1,12 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
-import type { CartItem } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
-import { useTimer } from '../../hooks/useTimer'
-import { formatMmSs } from '../../utils/orderHelpers'
-
-function ReservationTimer({ item }: { item: CartItem }) {
-  const handleLockExpiration = useOrderStore((state) => state.handleLockExpiration)
-
-  const onExpire = useCallback(() => {
-    handleLockExpiration(item.cartItemId)
-  }, [handleLockExpiration, item.cartItemId])
-
-  const remainingMs = useTimer(item.lockedAt, onExpire)
-  const isExpiring = remainingMs > 0 && remainingMs < 2 * 60 * 1000
-
-  if (remainingMs <= 0) {
-    return null
-  }
-
-  return (
-    <p className={`mt-1 text-xs ${isExpiring ? 'text-red-500 font-medium' : 'text-gray-400'}`}>
-      Reserva garantizada por: {formatMmSs(remainingMs)}
-    </p>
-  )
-}
 
 export function CartDrawer() {
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
-  const cart = useOrderStore((state) => state.cart)
+  const cartItemViews = useOrderStore((state) => state.getCartItemView())
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
   const updateQuantity = useOrderStore((state) => state.updateQuantity)
   const removeFromCart = useOrderStore((state) => state.removeFromCart)
@@ -39,7 +15,7 @@ export function CartDrawer() {
   const locale = 'es-ES'
   const currency = 'EUR'
 
-  const isEmpty = cart.length === 0
+  const isEmpty = cartItemViews.length === 0
 
   useEffect(() => {
     if (!isCartOpen) {
@@ -104,14 +80,13 @@ export function CartDrawer() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {cart.map((item) => (
+              {cartItemViews.map((item) => (
                 <li key={item.cartItemId} className="rounded-lg border border-gray-200 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate font-bold text-gray-900">
                         {item.displayName}
                       </p>
-                      <ReservationTimer item={item} />
                     </div>
                     <button
                       type="button"

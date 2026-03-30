@@ -14,7 +14,7 @@ export function OrderSummary({
   locale = 'es-ES',
   currency = 'EUR',
 }: OrderSummaryProps) {
-  const cart = useOrderStore((state) => state.cart)
+  const cartItemViews = useOrderStore((state) => state.getCartItemView())
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
   const setActiveOrder = useOrderStore((state) => state.setActiveOrder)
 
@@ -31,7 +31,7 @@ export function OrderSummary({
       <h3 className="text-lg font-semibold text-gray-900">Resumen del pedido</h3>
 
       <ul className="mt-4 space-y-2 text-sm text-gray-700">
-        {cart.map((item) => (
+        {cartItemViews.map((item) => (
           <li key={item.cartItemId} className="flex items-center justify-between">
             <span className="text-gray-800">
               {item.displayName} x{item.quantity}

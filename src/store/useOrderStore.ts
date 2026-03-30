@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { fetchProductsCatalog, lockProduct } from '../services/api'
-import type { ProductConfig } from '../types'
+import { fetchCatalog } from '../services/productService'
+import type { CatalogPizza, CatalogSize } from '../services/productService'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
 
@@ -19,24 +19,25 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
 }
 
 interface OrderStore {
-  products: ProductConfig[]
-  isLoadingProducts: boolean
-  productsError: string | null
+  catalog: CatalogPizza[]
+  isLoading: boolean
+  catalogError: string | null
   cart: CartItem[]
   isCartOpen: boolean
   hasHydrated: boolean
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
-  fetchProducts: () => Promise<void>
-  addToCart: (item: CartItem) => Promise<void>
+  loadCatalog: () => Promise<void>
+  addToCart: (productConfigId: string, quantity: number) => void
   removeFromCart: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, delta: number) => void
   toggleCart: () => void
   setHasHydrated: (value: boolean) => void
   clearCart: () => void
   getTotalPrice: () => number
-  handleLockExpiration: (cartItemId: string) => void
+  getCartItemView: () => CartItemView[]
+  findCatalogSize: (productConfigId: string) => (CatalogSize & { pizzaName: string }) | undefined
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
   setOrderStatus: (status: OrderStatus) => void
   clearActiveOrder: () => void
@@ -46,10 +47,15 @@ interface OrderStore {
 export interface CartItem {
   cartItemId: string
   productConfigId: string
+  quantity: number
+}
+
+export interface CartItemView {
+  cartItemId: string
+  productConfigId: string
   displayName: string
   price: number
   quantity: number
-  lockedAt: number
 }
 
 interface SetActiveOrderInput {
@@ -75,10 +81,6 @@ export interface ActiveOrder {
   created_at: Date | string | number
 }
 
-function calculateOrderTotal(cart: CartItem[]): number {
-  return cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-}
-
 const stopCountdown = () => {
   if (!countdownTimer) {
     return
@@ -86,6 +88,21 @@ const stopCountdown = () => {
 
   clearInterval(countdownTimer)
   countdownTimer = null
+}
+
+function findSizeInCatalog(
+  catalog: CatalogPizza[],
+  productConfigId: string,
+): (CatalogSize & { pizzaName: string }) | undefined {
+  for (const pizza of catalog) {
+    const size = pizza.sizes.find((s) => s.product_config_id === productConfigId)
+
+    if (size) {
+      return { ...size, pizzaName: pizza.pizzaName }
+    }
+  }
+
+  return undefined
 }
 
 export const useOrderStore = create<OrderStore>()(
@@ -113,66 +130,58 @@ export const useOrderStore = create<OrderStore>()(
       }
 
       return {
-        products: [],
-        isLoadingProducts: false,
-        productsError: null,
+        catalog: [],
+        isLoading: false,
+        catalogError: null,
         cart: [],
         isCartOpen: false,
         hasHydrated: false,
         activeOrder: null,
         timeRemaining: ORDER_LOCK_TIME_SECONDS,
         isLocked: false,
-        fetchProducts: async () => {
-          set({ isLoadingProducts: true, productsError: null })
+        loadCatalog: async () => {
+          set({ isLoading: true, catalogError: null })
           try {
-            const data = await fetchProductsCatalog()
-            set({ products: data.products, isLoadingProducts: false })
+            const data = await fetchCatalog()
+            set({ catalog: data.pizzas, isLoading: false })
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Error al cargar productos'
-            set({ productsError: message, isLoadingProducts: false })
+            const message = error instanceof Error ? error.message : 'Error al cargar el catálogo'
+            set({ catalogError: message, isLoading: false })
           }
         },
-        addToCart: async (item) => {
-          try {
-            const response = await lockProduct(item.productConfigId)
-            const lockedAt = new Date(response.lockedAt).getTime()
+        addToCart: (productConfigId, quantity) => {
+          set((state) => {
+            const existingItem = state.cart.find(
+              (cartItem) => cartItem.productConfigId === productConfigId,
+            )
 
-            set((state) => {
-              const existingItem = state.cart.find(
-                (cartItem) => cartItem.productConfigId === item.productConfigId,
-              )
-
-              if (!existingItem) {
-                return { cart: [...state.cart, { ...item, lockedAt }] }
-              }
-
-              return {
-                cart: state.cart.map((cartItem) =>
-                  cartItem.productConfigId === item.productConfigId
-                    ? { ...cartItem, quantity: cartItem.quantity + item.quantity, lockedAt }
-                    : cartItem,
-                ),
-              }
-            })
-          } catch {
-            set((state) => {
-              const existingItem = state.cart.find(
-                (cartItem) => cartItem.productConfigId === item.productConfigId,
-              )
-
-              if (!existingItem) {
-                return { cart: [...state.cart, item] }
-              }
+            if (!existingItem) {
+              const nextCart = [...state.cart, {
+                cartItemId: crypto.randomUUID(),
+                productConfigId,
+                quantity,
+              }]
 
               return {
-                cart: state.cart.map((cartItem) =>
-                  cartItem.productConfigId === item.productConfigId
-                    ? { ...cartItem, quantity: cartItem.quantity + item.quantity }
-                    : cartItem,
-                ),
+                cart: nextCart,
               }
+            }
+
+            const nextCart = state.cart.map((cartItem) => {
+              if (cartItem.productConfigId === productConfigId) {
+                return {
+                  ...cartItem,
+                  quantity: cartItem.quantity + quantity,
+                }
+              }
+
+              return cartItem
             })
-          }
+
+            return {
+              cart: nextCart,
+            }
+          })
         },
         removeFromCart: (cartItemId) => {
           set((state) => {
@@ -219,28 +228,38 @@ export const useOrderStore = create<OrderStore>()(
           }
         },
         getTotalPrice: () => {
-          return calculateOrderTotal(get().cart)
-        },
-        handleLockExpiration: (cartItemId) => {
-          const item = get().cart.find((i) => i.cartItemId === cartItemId)
-          set((state) => ({
-            cart: state.cart.filter((i) => i.cartItemId !== cartItemId),
-          }))
+          const { cart, catalog } = get()
 
-          if (item && typeof window !== 'undefined') {
-            localStorage.setItem('pizzaclick-order-storage', JSON.stringify({ state: { cart: get().cart }, version: 0 }))
-            window.dispatchEvent(
-              new CustomEvent('pizzaclick:lock-expired', {
-                detail: { displayName: item.displayName },
-              }),
-            )
-          }
+          return cart.reduce((sum, item) => {
+            const match = findSizeInCatalog(catalog, item.productConfigId)
+            const price = match?.price ?? 0
+
+            return sum + price * item.quantity
+          }, 0)
+        },
+        getCartItemView: () => {
+          const { cart, catalog } = get()
+
+          return cart.map((item) => {
+            const match = findSizeInCatalog(catalog, item.productConfigId)
+
+            return {
+              cartItemId: item.cartItemId,
+              productConfigId: item.productConfigId,
+              displayName: match ? `${match.pizzaName} — ${match.sizeName}` : item.productConfigId,
+              price: match?.price ?? 0,
+              quantity: item.quantity,
+            }
+          })
+        },
+        findCatalogSize: (productConfigId) => {
+          return findSizeInCatalog(get().catalog, productConfigId)
         },
         setActiveOrder: (orderData) => {
           const currentOrder = get().activeOrder
           const currentCart = get().cart
           const createdAt = Date.now()
-          const total = calculateOrderTotal(currentCart)
+          const total = get().getTotalPrice()
 
           set({
             activeOrder: {

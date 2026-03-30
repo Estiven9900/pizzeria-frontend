@@ -1,7 +1,7 @@
 import { ShoppingCart } from 'lucide-react'
 import { useEffect, useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
-import type { ProductConfig } from '../../types'
+import type { CatalogPizza } from '../../services/productService'
 import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
 
@@ -16,40 +16,28 @@ const fallbackImages: Record<string, string> = {
     'https://images.unsplash.com/photo-1548365328-9f547fb0953e?auto=format&fit=crop&w=1200&q=80',
 }
 
-function groupByPizza(products: ProductConfig[]): ProductConfig[][] {
-  const map = new Map<string, ProductConfig[]>()
-  for (const config of products) {
-    const group = map.get(config.pizzaName) ?? []
-    group.push(config)
-    map.set(config.pizzaName, group)
-  }
-  return Array.from(map.values())
-}
-
-function withFallbackImage(configs: ProductConfig[]): ProductConfig[] {
-  if (configs.length === 0) return configs
-  if (configs[0].imageUrl) return configs
-
-  const fallback = fallbackImages[configs[0].pizzaName] ?? '/hero.png'
-  return configs.map((c) => ({ ...c, imageUrl: fallback }))
+function withFallbackImage(pizza: CatalogPizza): CatalogPizza {
+  if (pizza.imageUrl) return pizza
+  const fallback = fallbackImages[pizza.pizzaName] ?? '/hero.png'
+  return { ...pizza, imageUrl: fallback }
 }
 
 export function CustomerView() {
   const cart = useOrderStore((state) => state.cart)
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
   const toggleCart = useOrderStore((state) => state.toggleCart)
-  const products = useOrderStore((state) => state.products)
-  const isLoadingProducts = useOrderStore((state) => state.isLoadingProducts)
-  const productsError = useOrderStore((state) => state.productsError)
-  const fetchProducts = useOrderStore((state) => state.fetchProducts)
+  const catalog = useOrderStore((state) => state.catalog)
+  const isLoading = useOrderStore((state) => state.isLoading)
+  const catalogError = useOrderStore((state) => state.catalogError)
+  const loadCatalog = useOrderStore((state) => state.loadCatalog)
 
   useEffect(() => {
-    if (products.length === 0) {
-      void fetchProducts()
+    if (catalog.length === 0) {
+      void loadCatalog()
     }
-  }, [products.length, fetchProducts])
+  }, [catalog.length, loadCatalog])
 
-  const pizzaGroups = useMemo(() => groupByPizza(products).map(withFallbackImage), [products])
+  const pizzas = useMemo(() => catalog.map(withFallbackImage), [catalog])
 
   const totalItems = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.quantity, 0)
@@ -82,16 +70,16 @@ export function CustomerView() {
         </button>
       </header>
 
-      {isLoadingProducts && (
+      {isLoading && (
         <p className="py-12 text-center text-gray-500">Cargando catálogo…</p>
       )}
 
-      {productsError && (
+      {catalogError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-center">
-          <p className="text-sm text-red-700">{productsError}</p>
+          <p className="text-sm text-red-700">{catalogError}</p>
           <button
             type="button"
-            onClick={() => void fetchProducts()}
+            onClick={() => void loadCatalog()}
             className="mt-2 text-sm font-medium text-red-600 underline hover:text-red-800"
           >
             Reintentar
@@ -99,10 +87,10 @@ export function CustomerView() {
         </div>
       )}
 
-      {!isLoadingProducts && !productsError && (
+      {!isLoading && !catalogError && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {pizzaGroups.map((configs) => (
-            <PizzaCard key={configs[0].pizzaName} configs={configs} />
+          {pizzas.map((pizza) => (
+            <PizzaCard key={pizza.pizzaName} pizza={pizza} />
           ))}
         </div>
       )}
