@@ -1,8 +1,16 @@
+import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { CheckoutForm } from './modules/customer/CheckoutForm'
 import { CustomerView } from './modules/customer/CustomerView'
+import { useOrderStore } from './store/useOrderStore'
 
 function App() {
+  const loadCatalog = useOrderStore((state) => state.loadCatalog)
+
+  useEffect(() => {
+    void loadCatalog()
+  }, [loadCatalog])
+
   return (
     <div className="min-h-screen bg-gray-100 p-8">
       <header className="mb-8">

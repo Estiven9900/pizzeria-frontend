@@ -1,5 +1,5 @@
 import { ShoppingCart } from 'lucide-react'
-import { useEffect, useMemo } from 'react'
+import { useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
 import type { CatalogPizza } from '../../services/productService'
 import { CartDrawer } from './CartDrawer'
@@ -30,12 +30,6 @@ export function CustomerView() {
   const isLoading = useOrderStore((state) => state.isLoading)
   const catalogError = useOrderStore((state) => state.catalogError)
   const loadCatalog = useOrderStore((state) => state.loadCatalog)
-
-  useEffect(() => {
-    if (catalog.length === 0) {
-      void loadCatalog()
-    }
-  }, [catalog.length, loadCatalog])
 
   const pizzas = useMemo(() => catalog.map(withFallbackImage), [catalog])
 

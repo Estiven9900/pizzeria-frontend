@@ -82,13 +82,16 @@ export function PizzaCard({
                   onClick={() => setSelectedConfigId(size.product_config_id)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                     !size.is_available
-                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-60'
                       : isSelected
                         ? 'border-red-600 bg-red-50 text-red-700'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  {size.is_available ? size.sizeName : 'Agotado'}
+                  {size.sizeName}
+                  {!size.is_available && (
+                    <span className="ml-1 text-xs text-gray-400">· Agotado</span>
+                  )}
                 </button>
               )
             })}
