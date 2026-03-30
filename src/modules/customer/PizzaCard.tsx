@@ -40,7 +40,7 @@ export function PizzaCard({
   }, [showAddedToast])
 
   const handleOrder = async () => {
-    if (!selectedConfig.isAvailable || isLocking) {
+    if (!selectedConfig.canBeOrdered || isLocking) {
       return
     }
 
@@ -90,17 +90,17 @@ export function PizzaCard({
                   type="button"
                   role="radio"
                   aria-checked={isSelected}
-                  disabled={!config.isAvailable}
+                  disabled={!config.canBeOrdered}
                   onClick={() => setSelectedConfigId(config.id)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                    !config.isAvailable
+                    !config.canBeOrdered
                       ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400'
                       : isSelected
                         ? 'border-red-600 bg-red-50 text-red-700'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  {config.isAvailable ? config.sizeName : 'Agotado'}
+                  {config.canBeOrdered ? config.sizeName : 'Agotado'}
                 </button>
               )
             })}
@@ -111,10 +111,10 @@ export function PizzaCard({
           <button
             type="button"
             onClick={() => void handleOrder()}
-            disabled={!selectedConfig.isAvailable || isLocking}
+            disabled={!selectedConfig.canBeOrdered || isLocking}
             className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLocking ? 'Reservando…' : !selectedConfig.isAvailable ? 'Agotado' : 'Agregar al Carrito'}
+            {isLocking ? 'Reservando…' : !selectedConfig.canBeOrdered ? 'Agotado' : 'Agregar al Carrito'}
           </button>
 
           <p

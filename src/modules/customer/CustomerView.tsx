@@ -6,22 +6,22 @@ import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
 
 const fallbackImages: Record<string, string> = {
-  pepperoni:
+    Pepperoni:
     'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80',
-  margherita:
+  Margherita:
     'https://images.unsplash.com/photo-1604382355076-af4b0eb60143?auto=format&fit=crop&w=1200&q=80',
-  hawaiian:
+  Hawaiian:
     'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=1200&q=80',
-  veggie:
+  Veggie:
     'https://images.unsplash.com/photo-1548365328-9f547fb0953e?auto=format&fit=crop&w=1200&q=80',
 }
 
 function groupByPizza(products: ProductConfig[]): ProductConfig[][] {
   const map = new Map<string, ProductConfig[]>()
   for (const config of products) {
-    const group = map.get(config.pizzaId) ?? []
+    const group = map.get(config.pizzaName) ?? []
     group.push(config)
-    map.set(config.pizzaId, group)
+    map.set(config.pizzaName, group)
   }
   return Array.from(map.values())
 }
@@ -30,7 +30,7 @@ function withFallbackImage(configs: ProductConfig[]): ProductConfig[] {
   if (configs.length === 0) return configs
   if (configs[0].imageUrl) return configs
 
-  const fallback = fallbackImages[configs[0].pizzaId] ?? '/hero.png'
+  const fallback = fallbackImages[configs[0].pizzaName] ?? '/hero.png'
   return configs.map((c) => ({ ...c, imageUrl: fallback }))
 }
 
@@ -102,7 +102,7 @@ export function CustomerView() {
       {!isLoadingProducts && !productsError && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pizzaGroups.map((configs) => (
-            <PizzaCard key={configs[0].pizzaId} configs={configs} />
+            <PizzaCard key={configs[0].pizzaName} configs={configs} />
           ))}
         </div>
       )}
