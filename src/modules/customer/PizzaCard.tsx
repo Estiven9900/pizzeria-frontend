@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CatalogPizza } from '../../services/productService'
+import type { CatalogPizza } from '../../services/api'
 import { useOrderStore } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
 
@@ -82,15 +82,15 @@ export function PizzaCard({
                   onClick={() => setSelectedConfigId(size.product_config_id)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                     !size.is_available
-                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-60'
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-50'
                       : isSelected
                         ? 'border-red-600 bg-red-50 text-red-700'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  {size.sizeName}
+                  {size.name}
                   {!size.is_available && (
-                    <span className="ml-1 text-xs text-gray-400">· Agotado</span>
+                    <span className="ml-1 text-xs text-gray-400">· Sin Stock</span>
                   )}
                 </button>
               )
@@ -105,7 +105,7 @@ export function PizzaCard({
             disabled={!selectedSize.is_available || isLocking}
             className="w-full rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isLocking ? 'Reservando…' : !selectedSize.is_available ? 'Agotado' : 'Agregar al Carrito'}
+            {isLocking ? 'Reservando…' : !selectedSize.is_available ? 'Sin Stock' : 'Agregar al Carrito'}
           </button>
 
           <p

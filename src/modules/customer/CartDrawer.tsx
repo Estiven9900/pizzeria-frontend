@@ -1,13 +1,47 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
+import type { CartItemView } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
+import { formatMmSs } from '../../utils/orderHelpers'
+import { useCountdown } from '../../hooks/useCountdown'
+
+function ItemCountdown({ item }: { item: CartItemView }) {
+  const markItemExpired = useOrderStore((state) => state.markItemExpired)
+
+  const onExpire = useCallback(() => {
+    markItemExpired(item.cartItemId)
+  }, [markItemExpired, item.cartItemId])
+
+  const remainingMs = useCountdown(item.lockedUntil, onExpire)
+
+  if (item.expired) {
+    return (
+      <p className="mt-1 text-xs font-medium text-red-600">
+        Reserva expirada
+      </p>
+    )
+  }
+
+  if (remainingMs <= 0) {
+    return null
+  }
+
+  const isExpiring = remainingMs < 2 * 60 * 1000
+
+  return (
+    <p className={`mt-1 text-xs ${isExpiring ? 'font-medium text-red-500' : 'text-gray-400'}`}>
+      Reserva: {formatMmSs(remainingMs)}
+    </p>
+  )
+}
 
 export function CartDrawer() {
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
   const cartItemViews = useOrderStore((state) => state.getCartItemView())
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
+  const hasExpired = useOrderStore((state) => state.hasExpiredItems())
   const updateQuantity = useOrderStore((state) => state.updateQuantity)
   const removeFromCart = useOrderStore((state) => state.removeFromCart)
   const toggleCart = useOrderStore((state) => state.toggleCart)
@@ -87,6 +121,7 @@ export function CartDrawer() {
                       <p className="truncate font-bold text-gray-900">
                         {item.displayName}
                       </p>
+                      <ItemCountdown item={item} />
                     </div>
                     <button
                       type="button"
@@ -147,15 +182,20 @@ export function CartDrawer() {
           <Link
             to="/checkout"
             onClick={handleContinueToCheckout}
-            aria-disabled={isEmpty}
+            aria-disabled={isEmpty || hasExpired}
             className={`block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors ${
-              isEmpty
+              isEmpty || hasExpired
                 ? 'pointer-events-none bg-red-300'
                 : 'bg-red-600 hover:bg-red-700'
             }`}
           >
             Ir al Checkout
           </Link>
+          {hasExpired && (
+            <p className="mt-2 text-center text-xs text-red-600">
+              Elimina los ítems expirados para continuar
+            </p>
+          )}
         </footer>
       </aside>
     </div>
