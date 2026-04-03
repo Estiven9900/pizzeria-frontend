@@ -5,11 +5,11 @@ import { CustomerView } from './modules/customer/CustomerView'
 import { useOrderStore } from './store/useOrderStore'
 
 function App() {
-  const loadCatalog = useOrderStore((state) => state.loadCatalog)
+  const initCatalog = useOrderStore((state) => state.initCatalog)
 
   useEffect(() => {
-    void loadCatalog()
-  }, [loadCatalog])
+    void initCatalog()
+  }, [initCatalog])
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">

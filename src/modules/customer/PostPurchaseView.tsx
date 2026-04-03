@@ -43,22 +43,17 @@ export function PostPurchaseView({
   const setOrderStatus = useOrderStore((state) => state.setOrderStatus)
   const isLocked = useOrderStore((state) => state.isLocked)
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
-  const findCatalogSize = useOrderStore((state) => state.findCatalogSize)
 
   const cartItems = activeOrder?.cart ?? []
 
   const cartItemViews = useMemo(() => {
-    return cartItems.map((item) => {
-      const match = findCatalogSize(item.productConfigId)
-
-      return {
-        cartItemId: item.cartItemId,
-        displayName: match ? `${match.pizzaName} — ${match.sizeName}` : item.productConfigId,
-        price: match?.price ?? 0,
-        quantity: item.quantity,
-      }
-    })
-  }, [cartItems, findCatalogSize])
+    return cartItems.map((item) => ({
+      cartItemId: item.cartItemId,
+      displayName: item.name || item.productConfigId,
+      price: item.price ?? 0,
+      quantity: item.quantity,
+    }))
+  }, [cartItems])
 
   const [orderCode] = useState(() => Math.floor(1000 + Math.random() * 9000))
   const [couponCode, setCouponCode] = useState<string | null>(null)

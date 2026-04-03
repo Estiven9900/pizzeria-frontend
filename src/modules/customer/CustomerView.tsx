@@ -1,7 +1,7 @@
 import { ShoppingCart } from 'lucide-react'
 import { useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
-import type { CatalogPizza } from '../../services/productService'
+import type { CatalogPizza } from '../../services/api'
 import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
 
@@ -29,7 +29,7 @@ export function CustomerView() {
   const catalog = useOrderStore((state) => state.catalog)
   const isLoading = useOrderStore((state) => state.isLoading)
   const catalogError = useOrderStore((state) => state.catalogError)
-  const loadCatalog = useOrderStore((state) => state.loadCatalog)
+  const initCatalog = useOrderStore((state) => state.initCatalog)
 
   const pizzas = useMemo(() => catalog.map(withFallbackImage), [catalog])
 
@@ -73,7 +73,7 @@ export function CustomerView() {
           <p className="text-sm text-red-700">{catalogError}</p>
           <button
             type="button"
-            onClick={() => void loadCatalog()}
+            onClick={() => void initCatalog()}
             className="mt-2 text-sm font-medium text-red-600 underline hover:text-red-800"
           >
             Reintentar

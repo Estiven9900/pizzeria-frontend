@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { fetchCatalog } from '../services/productService'
-import type { CatalogPizza, CatalogSize } from '../services/productService'
+import { fetchProducts, lockCartItem } from '../services/api'
+import type { CatalogPizza, CatalogSize } from '../services/api'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
 
@@ -18,6 +18,19 @@ function getCreatedAtTimestamp(createdAt: Date | string | number): number {
   return createdAtDate.getTime()
 }
 
+const SESSION_ID_KEY = 'pizzaclick-session-id'
+
+function getSessionId(): string {
+  let sessionId = localStorage.getItem(SESSION_ID_KEY)
+
+  if (!sessionId) {
+    sessionId = crypto.randomUUID()
+    localStorage.setItem(SESSION_ID_KEY, sessionId)
+  }
+
+  return sessionId
+}
+
 interface OrderStore {
   catalog: CatalogPizza[]
   isLoading: boolean
@@ -28,8 +41,8 @@ interface OrderStore {
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
-  loadCatalog: () => Promise<void>
-  addToCart: (productConfigId: string, quantity: number) => void
+  initCatalog: () => Promise<void>
+  addToCart: (productConfigId: string, quantity: number) => Promise<void>
   removeFromCart: (cartItemId: string) => void
   updateQuantity: (cartItemId: string, delta: number) => void
   toggleCart: () => void
@@ -37,6 +50,8 @@ interface OrderStore {
   clearCart: () => void
   getTotalPrice: () => number
   getCartItemView: () => CartItemView[]
+  hasExpiredItems: () => boolean
+  markItemExpired: (cartItemId: string) => void
   findCatalogSize: (productConfigId: string) => (CatalogSize & { pizzaName: string }) | undefined
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
   setOrderStatus: (status: OrderStatus) => void
@@ -47,7 +62,11 @@ interface OrderStore {
 export interface CartItem {
   cartItemId: string
   productConfigId: string
+  name: string
+  price: number
   quantity: number
+  lockedUntil: number
+  expired: boolean
 }
 
 export interface CartItemView {
@@ -56,6 +75,8 @@ export interface CartItemView {
   displayName: string
   price: number
   quantity: number
+  lockedUntil: number
+  expired: boolean
 }
 
 interface SetActiveOrderInput {
@@ -139,17 +160,27 @@ export const useOrderStore = create<OrderStore>()(
         activeOrder: null,
         timeRemaining: ORDER_LOCK_TIME_SECONDS,
         isLocked: false,
-        loadCatalog: async () => {
+        initCatalog: async () => {
           set({ isLoading: true, catalogError: null })
           try {
-            const data = await fetchCatalog()
+            const data = await fetchProducts()
             set({ catalog: data.pizzas, isLoading: false })
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Error al cargar el catálogo'
             set({ catalogError: message, isLoading: false })
           }
         },
-        addToCart: (productConfigId, quantity) => {
+        addToCart: async (productConfigId, quantity) => {
+          const match = findSizeInCatalog(get().catalog, productConfigId)
+          if (!match) return
+
+          const sessionId = getSessionId()
+          const { expires_at } = await lockCartItem(productConfigId, sessionId)
+          const lockedUntil = new Date(expires_at).getTime()
+
+          const name = `${match.pizzaName} — ${match.name}`
+          const { price } = match
+
           set((state) => {
             const existingItem = state.cart.find(
               (cartItem) => cartItem.productConfigId === productConfigId,
@@ -159,7 +190,11 @@ export const useOrderStore = create<OrderStore>()(
               const nextCart = [...state.cart, {
                 cartItemId: crypto.randomUUID(),
                 productConfigId,
+                name,
+                price,
                 quantity,
+                lockedUntil,
+                expired: false,
               }]
 
               return {
@@ -171,7 +206,11 @@ export const useOrderStore = create<OrderStore>()(
               if (cartItem.productConfigId === productConfigId) {
                 return {
                   ...cartItem,
+                  name,
+                  price,
                   quantity: cartItem.quantity + quantity,
+                  lockedUntil,
+                  expired: false,
                 }
               }
 
@@ -228,29 +267,34 @@ export const useOrderStore = create<OrderStore>()(
           }
         },
         getTotalPrice: () => {
-          const { cart, catalog } = get()
+          const { cart } = get()
 
           return cart.reduce((sum, item) => {
-            const match = findSizeInCatalog(catalog, item.productConfigId)
-            const price = match?.price ?? 0
-
-            return sum + price * item.quantity
+            return sum + (item.price ?? 0) * item.quantity
           }, 0)
         },
         getCartItemView: () => {
-          const { cart, catalog } = get()
+          const { cart } = get()
 
-          return cart.map((item) => {
-            const match = findSizeInCatalog(catalog, item.productConfigId)
-
-            return {
-              cartItemId: item.cartItemId,
-              productConfigId: item.productConfigId,
-              displayName: match ? `${match.pizzaName} — ${match.sizeName}` : item.productConfigId,
-              price: match?.price ?? 0,
-              quantity: item.quantity,
-            }
-          })
+          return cart.map((item) => ({
+            cartItemId: item.cartItemId,
+            productConfigId: item.productConfigId,
+            displayName: item.name || item.productConfigId,
+            price: item.price ?? 0,
+            quantity: item.quantity,
+            lockedUntil: item.lockedUntil,
+            expired: item.expired,
+          }))
+        },
+        hasExpiredItems: () => {
+          return get().cart.some((item) => item.expired)
+        },
+        markItemExpired: (cartItemId) => {
+          set((state) => ({
+            cart: state.cart.map((item) =>
+              item.cartItemId === cartItemId ? { ...item, expired: true } : item,
+            ),
+          }))
         },
         findCatalogSize: (productConfigId) => {
           return findSizeInCatalog(get().catalog, productConfigId)
