@@ -88,10 +88,7 @@ export function PizzaCard({
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  {size.name}
-                  {!size.is_available && (
-                    <span className="ml-1 text-xs text-gray-400">· Sin Stock</span>
-                  )}
+                  {!size.is_available ? 'Agotado' : size.name}
                 </button>
               )
             })}

@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { fetchProducts, lockCartItem } from '../services/api'
+import { fetchProducts, lockCartItem as lockProduct } from '../services/api'
 import type { CatalogPizza, CatalogSize } from '../services/api'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
@@ -33,6 +33,7 @@ function getSessionId(): string {
 
 interface OrderStore {
   catalog: CatalogPizza[]
+  availableProducts: AvailableProduct[]
   isLoading: boolean
   catalogError: string | null
   cart: CartItem[]
@@ -41,6 +42,7 @@ interface OrderStore {
   activeOrder: ActiveOrder | null
   timeRemaining: number
   isLocked: boolean
+  loadCatalog: () => Promise<void>
   initCatalog: () => Promise<void>
   addToCart: (productConfigId: string, quantity: number) => Promise<void>
   removeFromCart: (cartItemId: string) => void
@@ -51,7 +53,9 @@ interface OrderStore {
   getTotalPrice: () => number
   getCartItemView: () => CartItemView[]
   hasExpiredItems: () => boolean
+  canCheckout: () => boolean
   markItemExpired: (cartItemId: string) => void
+  checkLockExpirations: () => void
   findCatalogSize: (productConfigId: string) => (CatalogSize & { pizzaName: string }) | undefined
   setActiveOrder: (orderData?: SetActiveOrderInput) => void
   setOrderStatus: (status: OrderStatus) => void
@@ -65,8 +69,17 @@ export interface CartItem {
   name: string
   price: number
   quantity: number
+  expiresAt: string
   lockedUntil: number
   expired: boolean
+}
+
+export interface AvailableProduct {
+  productConfigId: string
+  name: string
+  price: number
+  isAvailable: boolean
+  selectable: boolean
 }
 
 export interface CartItemView {
@@ -126,6 +139,18 @@ function findSizeInCatalog(
   return undefined
 }
 
+function mapAvailableProducts(catalog: CatalogPizza[]): AvailableProduct[] {
+  return catalog.flatMap((pizza) =>
+    pizza.sizes.map((size) => ({
+      productConfigId: size.product_config_id,
+      name: `${pizza.pizzaName} — ${size.name}`,
+      price: size.price,
+      isAvailable: size.is_available,
+      selectable: size.is_available,
+    })),
+  )
+}
+
 export const useOrderStore = create<OrderStore>()(
   persist(
     (set, get) => {
@@ -152,6 +177,7 @@ export const useOrderStore = create<OrderStore>()(
 
       return {
         catalog: [],
+        availableProducts: [],
         isLoading: false,
         catalogError: null,
         cart: [],
@@ -160,26 +186,34 @@ export const useOrderStore = create<OrderStore>()(
         activeOrder: null,
         timeRemaining: ORDER_LOCK_TIME_SECONDS,
         isLocked: false,
-        initCatalog: async () => {
+        // RF-01: sincroniza catálogo y derivados de disponibilidad.
+        loadCatalog: async () => {
           set({ isLoading: true, catalogError: null })
           try {
             const data = await fetchProducts()
-            set({ catalog: data.pizzas, isLoading: false })
+            const availableProducts = mapAvailableProducts(data.pizzas)
+            set({ catalog: data.pizzas, availableProducts, isLoading: false })
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Error al cargar el catálogo'
             set({ catalogError: message, isLoading: false })
           }
         },
+        initCatalog: async () => {
+          await get().loadCatalog()
+        },
+        // RF-02: Bloquea configs no disponibles, hace lock en servidor,
+        // y guarda solo product_config_id, name y price en el carrito.
         addToCart: async (productConfigId, quantity) => {
-          const match = findSizeInCatalog(get().catalog, productConfigId)
-          if (!match) return
+          const selectedProduct = get().availableProducts.find(
+            (product) => product.productConfigId === productConfigId,
+          )
+          if (!selectedProduct || !selectedProduct.selectable) return
+
+          const { name, price } = selectedProduct
 
           const sessionId = getSessionId()
-          const { expires_at } = await lockCartItem(productConfigId, sessionId)
+          const { expires_at } = await lockProduct(productConfigId, sessionId)
           const lockedUntil = new Date(expires_at).getTime()
-
-          const name = `${match.pizzaName} — ${match.name}`
-          const { price } = match
 
           set((state) => {
             const existingItem = state.cart.find(
@@ -187,38 +221,34 @@ export const useOrderStore = create<OrderStore>()(
             )
 
             if (!existingItem) {
-              const nextCart = [...state.cart, {
-                cartItemId: crypto.randomUUID(),
-                productConfigId,
-                name,
-                price,
-                quantity,
-                lockedUntil,
-                expired: false,
-              }]
-
               return {
-                cart: nextCart,
+                cart: [...state.cart, {
+                  cartItemId: crypto.randomUUID(),
+                  productConfigId,
+                  name,
+                  price,
+                  quantity,
+                  expiresAt: expires_at,
+                  lockedUntil,
+                  expired: false,
+                }],
               }
             }
 
-            const nextCart = state.cart.map((cartItem) => {
-              if (cartItem.productConfigId === productConfigId) {
-                return {
-                  ...cartItem,
-                  name,
-                  price,
-                  quantity: cartItem.quantity + quantity,
-                  lockedUntil,
-                  expired: false,
-                }
-              }
-
-              return cartItem
-            })
-
             return {
-              cart: nextCart,
+              cart: state.cart.map((cartItem) =>
+                cartItem.productConfigId === productConfigId
+                  ? {
+                    ...cartItem,
+                    quantity: cartItem.quantity + quantity,
+                    name,
+                    price,
+                    expiresAt: expires_at,
+                    lockedUntil,
+                    expired: false,
+                  }
+                  : cartItem,
+              ),
             }
           })
         },
@@ -287,12 +317,38 @@ export const useOrderStore = create<OrderStore>()(
           }))
         },
         hasExpiredItems: () => {
-          return get().cart.some((item) => item.expired)
+          const now = Date.now()
+          return get().cart.some(
+            (item) => item.expired || now > new Date(item.expiresAt).getTime(),
+          )
+        },
+        canCheckout: () => {
+          const { cart } = get()
+          const now = Date.now()
+          return (
+            cart.length > 0
+            && cart.every(
+              (item) => !item.expired && now <= new Date(item.expiresAt).getTime(),
+            )
+          )
         },
         markItemExpired: (cartItemId) => {
           set((state) => ({
             cart: state.cart.map((item) =>
               item.cartItemId === cartItemId ? { ...item, expired: true } : item,
+            ),
+          }))
+        },
+        checkLockExpirations: () => {
+          const now = Date.now()
+          set((state) => ({
+            cart: state.cart.map((item) =>
+              !item.expired
+              && item.expiresAt
+              && Number.isFinite(new Date(item.expiresAt).getTime())
+              && now > new Date(item.expiresAt).getTime()
+                ? { ...item, expired: true }
+                : item,
             ),
           }))
         },

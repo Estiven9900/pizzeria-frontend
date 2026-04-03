@@ -1,31 +1,47 @@
-import { useCallback, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
 import type { CartItemView } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
 import { formatMmSs } from '../../utils/orderHelpers'
-import { useCountdown } from '../../hooks/useCountdown'
 
 function ItemCountdown({ item }: { item: CartItemView }) {
   const markItemExpired = useOrderStore((state) => state.markItemExpired)
+  const [remainingMs, setRemainingMs] = useState(() =>
+    Math.max(0, item.lockedUntil - Date.now()),
+  )
 
-  const onExpire = useCallback(() => {
-    markItemExpired(item.cartItemId)
-  }, [markItemExpired, item.cartItemId])
+  useEffect(() => {
+    if (item.expired) return
 
-  const remainingMs = useCountdown(item.lockedUntil, onExpire)
+    const ms = Math.max(0, item.lockedUntil - Date.now())
+    setRemainingMs(ms)
 
-  if (item.expired) {
+    if (ms === 0) {
+      markItemExpired(item.cartItemId)
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      const next = Math.max(0, item.lockedUntil - Date.now())
+      setRemainingMs(next)
+
+      if (next === 0) {
+        clearInterval(intervalId)
+        markItemExpired(item.cartItemId)
+      }
+    }, 1000)
+
+    return () => clearInterval(intervalId)
+  }, [item.lockedUntil, item.expired, item.cartItemId, markItemExpired])
+
+  if (item.expired || remainingMs <= 0) {
     return (
       <p className="mt-1 text-xs font-medium text-red-600">
-        Reserva expirada
+        Stock liberado, vuelve a agregar para reservar
       </p>
     )
-  }
-
-  if (remainingMs <= 0) {
-    return null
   }
 
   const isExpiring = remainingMs < 2 * 60 * 1000
@@ -41,10 +57,12 @@ export function CartDrawer() {
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
   const cartItemViews = useOrderStore((state) => state.getCartItemView())
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
+  const canCheckout = useOrderStore((state) => state.canCheckout())
   const hasExpired = useOrderStore((state) => state.hasExpiredItems())
   const updateQuantity = useOrderStore((state) => state.updateQuantity)
   const removeFromCart = useOrderStore((state) => state.removeFromCart)
   const toggleCart = useOrderStore((state) => state.toggleCart)
+  const checkLockExpirations = useOrderStore((state) => state.checkLockExpirations)
 
   const locale = 'es-ES'
   const currency = 'EUR'
@@ -56,13 +74,15 @@ export function CartDrawer() {
       return
     }
 
+    checkLockExpirations()
+
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
 
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [isCartOpen])
+  }, [isCartOpen, checkLockExpirations])
 
   const handleContinueToCheckout = () => {
     if (isCartOpen) {
@@ -115,7 +135,14 @@ export function CartDrawer() {
           ) : (
             <ul className="space-y-3">
               {cartItemViews.map((item) => (
-                <li key={item.cartItemId} className="rounded-lg border border-gray-200 p-3">
+                <li
+                  key={item.cartItemId}
+                  className={`rounded-lg border p-3 transition-colors ${
+                    item.expired
+                      ? 'border-red-200 bg-red-50'
+                      : 'border-gray-200'
+                  }`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate font-bold text-gray-900">
@@ -182,18 +209,18 @@ export function CartDrawer() {
           <Link
             to="/checkout"
             onClick={handleContinueToCheckout}
-            aria-disabled={isEmpty || hasExpired}
+            aria-disabled={!canCheckout}
             className={`block w-full rounded-lg px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors ${
-              isEmpty || hasExpired
+              !canCheckout
                 ? 'pointer-events-none bg-red-300'
                 : 'bg-red-600 hover:bg-red-700'
             }`}
           >
-            Ir al Checkout
+            Finalizar Compra
           </Link>
           {hasExpired && (
             <p className="mt-2 text-center text-xs text-red-600">
-              Elimina los ítems expirados para continuar
+              Reserva expirada. Elimina o actualiza los ítems expirados para continuar
             </p>
           )}
         </footer>
