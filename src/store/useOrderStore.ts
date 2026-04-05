@@ -1,8 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { fetchProducts, lockCartItem as lockProduct } from '../services/api'
-import type { CatalogPizza, CatalogSize } from '../services/api'
+import { fetchCatalog, lockProduct } from '../services/productService'
+import type { CatalogPizza, CatalogSize } from '../services/productService'
 import { calculateRemainingSeconds, ORDER_LOCK_TIME_SECONDS } from '../utils/orderHelpers'
 import type { OrderStatus } from '../types/pizza'
 
@@ -190,7 +190,7 @@ export const useOrderStore = create<OrderStore>()(
         loadCatalog: async () => {
           set({ isLoading: true, catalogError: null })
           try {
-            const data = await fetchProducts()
+            const data = await fetchCatalog()
             const availableProducts = mapAvailableProducts(data.pizzas)
             set({ catalog: data.pizzas, availableProducts, isLoading: false })
           } catch (error) {

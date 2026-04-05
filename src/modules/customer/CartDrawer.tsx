@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
-import type { CartItemView } from '../../store/useOrderStore'
+import type { CartItemView } from '../../store/useOrderStore' 
 import { formatPrice } from '../../utils/formatPrice'
 import { formatMmSs } from '../../utils/orderHelpers'
 

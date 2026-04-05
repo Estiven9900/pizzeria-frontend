@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CatalogPizza } from '../../services/api'
+import type { CatalogPizza } from '../../services/productService'
 import { useOrderStore } from '../../store/useOrderStore'
 import { formatPrice } from '../../utils/formatPrice'
 

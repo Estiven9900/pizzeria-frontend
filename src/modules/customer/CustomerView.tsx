@@ -1,7 +1,7 @@
 import { ShoppingCart } from 'lucide-react'
 import { useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
-import type { CatalogPizza } from '../../services/api'
+import type { CatalogPizza } from '../../services/productService'
 import { CartDrawer } from './CartDrawer'
 import { PizzaCard } from './PizzaCard'
 

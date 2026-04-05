@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { CheckoutForm } from './modules/customer/CheckoutForm'
 import { CustomerView } from './modules/customer/CustomerView'
 import { useOrderStore } from './store/useOrderStore'
+import { ToastContainer } from './components/ToastContainer'
 
 function App() {
   const initCatalog = useOrderStore((state) => state.initCatalog)
@@ -25,6 +26,7 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
+      <ToastContainer />
     </div>
   )
 }
