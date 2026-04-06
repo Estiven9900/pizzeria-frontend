@@ -16,11 +16,16 @@ export function PizzaCard({
 }: PizzaCardProps) {
   const addToCart = useOrderStore((state) => state.addToCart)
 
-  const [selectedConfigId, setSelectedConfigId] = useState(pizza.sizes[0].product_config_id)
+  const [selectedConfigId, setSelectedConfigId] = useState(
+    pizza.sizes[0]?.product_config_id ?? '',
+  )
   const [showAddedToast, setShowAddedToast] = useState(false)
   const [isLocking, setIsLocking] = useState(false)
 
-  const selectedSize = pizza.sizes.find((s) => s.product_config_id === selectedConfigId) ?? pizza.sizes[0]
+  const selectedSize =
+    pizza.sizes.find((s) => s.product_config_id === selectedConfigId) ?? pizza.sizes[0]
+
+  if (!selectedSize) return null
 
   useEffect(() => {
     if (!showAddedToast) {
