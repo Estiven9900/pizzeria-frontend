@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useOrderStore } from '../../store/useOrderStore'
 import type { CatalogPizza } from '../../services/productService'
 import { CartDrawer } from './CartDrawer'
-import { PizzaCard } from './PizzaCard'
+import { ProductList } from './ProductList'
 
 const fallbackImages: Record<string, string> = {
     Pepperoni:
@@ -82,11 +82,7 @@ export function CustomerView() {
       )}
 
       {!isLoading && !catalogError && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {pizzas.map((pizza) => (
-            <PizzaCard key={pizza.pizzaName} pizza={pizza} />
-          ))}
-        </div>
+        <ProductList products={pizzas} isLoading={isLoading} />
       )}
 
       <CartDrawer />

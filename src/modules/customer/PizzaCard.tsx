@@ -48,7 +48,7 @@ export function PizzaCard({
   }
 
   return (
-    <article className="w-full max-w-sm overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+    <article className={`w-full max-w-sm overflow-hidden rounded-2xl border bg-white shadow-lg transition-all duration-300 ${showAddedToast ? 'scale-[1.025] border-green-400 ring-2 ring-green-300' : 'border-gray-200'}`}>
       <div className="aspect-[4/3] w-full overflow-hidden bg-gray-100">
         <img
           src={pizza.imageUrl ?? '/hero.png'}
@@ -82,13 +82,13 @@ export function PizzaCard({
                   onClick={() => setSelectedConfigId(size.product_config_id)}
                   className={`rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
                     !size.is_available
-                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-50'
+                      ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400 opacity-60 grayscale'
                       : isSelected
                         ? 'border-red-600 bg-red-50 text-red-700'
                         : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
                   }`}
                 >
-                  {!size.is_available ? 'Agotado' : size.name}
+                  {!size.is_available ? 'Sin ingredientes' : size.name}
                 </button>
               )
             })}
