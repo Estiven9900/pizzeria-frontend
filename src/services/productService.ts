@@ -147,11 +147,13 @@ function mapBackendResponse(items: BackendPizzaItem[]): CatalogResponse {
  */
 export async function fetchCatalog(): Promise<CatalogResponse> {
   const { data } = await catalogApi.get<BackendPizzaItem[]>('/api/products')
-  return mapBackendResponse(data)
+  // Guard: si el backend devuelve null, [] vacío u otro tipo inesperado,
+  // mapBackendResponse recibe un array vacío y loadCatalog pone isLoading=false correctamente.
+  return mapBackendResponse(Array.isArray(data) ? data : [])
 }
 
 // ─── RF-02: Lock de reserva ───────────────────────────────────────────────────
-
+    
 export interface LockProductResponse {
   expires_at: string
 }
@@ -164,5 +166,33 @@ export async function lockProduct(
     product_config_id: configId,
     session_id: sessionId,
   })
+  return data
+}
+
+// ─── RF-03: Checkout ──────────────────────────────────────────────────────────
+
+export interface CheckoutItem {
+  product_config_id: string
+  quantity: number
+}
+
+export interface CheckoutRequest {
+  customer_name: string
+  customer_email: string
+  customer_phone: string
+  delivery_address: string
+  reference_notes?: string
+  session_id: string
+  items: CheckoutItem[]
+}
+
+export interface CheckoutResponse {
+  order_id: string
+  status: string
+  total: number
+}
+
+export async function submitCheckout(payload: CheckoutRequest): Promise<CheckoutResponse> {
+  const { data } = await catalogApi.post<CheckoutResponse>('/api/orders/checkout', payload)
   return data
 }
