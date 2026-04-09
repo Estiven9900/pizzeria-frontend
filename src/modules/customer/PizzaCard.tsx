@@ -16,17 +16,15 @@ export function PizzaCard({
 }: PizzaCardProps) {
   const addToCart = useOrderStore((state) => state.addToCart)
 
+  const firstSize = pizza.sizes[0]
+
   const [selectedConfigId, setSelectedConfigId] = useState(
-    pizza.sizes[0]?.product_config_id ?? '',
+    firstSize?.product_config_id ?? '',
   )
   const [showAddedToast, setShowAddedToast] = useState(false)
   const [isLocking, setIsLocking] = useState(false)
 
-  const selectedSize =
-    pizza.sizes.find((s) => s.product_config_id === selectedConfigId) ?? pizza.sizes[0]
-
-  if (!selectedSize) return null
-
+  // useEffect must come before any conditional return (Rules of Hooks)
   useEffect(() => {
     if (!showAddedToast) {
       return
@@ -40,6 +38,12 @@ export function PizzaCard({
       clearTimeout(timeoutId)
     }
   }, [showAddedToast])
+
+  // Guard after all hooks: safe to return null here
+  if (!firstSize) return null
+
+  const selectedSize =
+    pizza.sizes.find((s) => s.product_config_id === selectedConfigId) ?? firstSize
 
   const handleOrder = async () => {
     if (!selectedSize.is_available || isLocking) {

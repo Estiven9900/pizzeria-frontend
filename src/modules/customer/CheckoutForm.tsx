@@ -1,7 +1,11 @@
+import axios from 'axios'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { OrderTimer } from '../../components/OrderTimer'
+import { useNavigate } from 'react-router-dom'
+import { submitCheckout } from '../../services/productService'
 import { useOrderStore } from '../../store/useOrderStore'
+
+const SESSION_ID_KEY = 'pizzaclick-session-id'
 
 interface CheckoutFormValues {
   fullName: string
@@ -47,11 +51,15 @@ function validate(values: CheckoutFormValues): CheckoutFormErrors {
 }
 
 export function CheckoutForm() {
+  const navigate = useNavigate()
+  const cart = useOrderStore((state) => state.cart)
   const setActiveOrder = useOrderStore((state) => state.setActiveOrder)
+  const clearCart = useOrderStore((state) => state.clearCart)
+  const loadCatalog = useOrderStore((state) => state.loadCatalog)
   const [values, setValues] = useState<CheckoutFormValues>(initialValues)
   const [errors, setErrors] = useState<CheckoutFormErrors>({})
   const [isLoading, setIsLoading] = useState(false)
-  const [orderCreatedAt, setOrderCreatedAt] = useState<number | null>(null)
+  const [stockError, setStockError] = useState<string | null>(null)
 
   const handleChange = (
     field: keyof CheckoutFormValues,
@@ -82,30 +90,50 @@ export function CheckoutForm() {
       return
     }
 
+    setStockError(null)
     setIsLoading(true)
-    await new Promise((resolve) => setTimeout(resolve, 1000))
 
-    const createdAt = Date.now()
+    const sessionId = localStorage.getItem(SESSION_ID_KEY) ?? ''
 
-    setActiveOrder({
-      customer_name: values.fullName,
-      customer_email: values.email,
-      customer_phone: values.phoneNumber,
-      delivery_address: values.deliveryAddress,
-      reference_notes: values.referenceNotes.trim() || undefined,
-      status: 'Pending',
-    })
+    try {
+      const response = await submitCheckout({
+        customer_name: values.fullName,
+        customer_email: values.email,
+        customer_phone: values.phoneNumber,
+        delivery_address: values.deliveryAddress,
+        reference_notes: values.referenceNotes.trim() || undefined,
+        session_id: sessionId,
+        items: cart.map((item) => ({
+          product_config_id: item.productConfigId,
+          quantity: item.quantity,
+        })),
+      })
 
-    setOrderCreatedAt(createdAt)
-    setIsLoading(false)
-  }
+      setActiveOrder({
+        id: response.order_id,
+        customer_name: values.fullName,
+        customer_email: values.email,
+        customer_phone: values.phoneNumber,
+        delivery_address: values.deliveryAddress,
+        reference_notes: values.referenceNotes.trim() || undefined,
+        status: 'Pending',
+      })
 
-  if (orderCreatedAt) {
-    return (
-      <section className="flex min-h-[420px] w-full items-center justify-center rounded-2xl bg-white p-6 shadow-md">
-        <OrderTimer createdAt={orderCreatedAt} />
-      </section>
-    )
+      clearCart()
+      localStorage.removeItem(SESSION_ID_KEY)
+      navigate('/order-success')
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 400) {
+        setStockError(
+          '¡Lo sentimos! Alguien compró los últimos ingredientes mientras completabas tu orden. Tu carrito se ha actualizado.',
+        )
+        // Refresh catalog so unavailable items are reflected immediately
+        void loadCatalog()
+      }
+      // Non-400 errors are handled by the catalogApi interceptor (toast)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -115,7 +143,13 @@ export function CheckoutForm() {
         <p className="mt-1 text-sm text-gray-600">Completa tus datos para confirmar el pedido.</p>
       </header>
 
-      <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+      {stockError && (
+        <div role="alert" className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-orange-800">
+          {stockError}
+        </div>
+      )}
+
+      <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)} noValidate>
         <div>
           <label htmlFor="fullName" className="mb-1 block text-sm font-medium text-gray-700">
             Full Name
@@ -217,9 +251,21 @@ export function CheckoutForm() {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isLoading ? 'Procesando...' : 'Confirmar Pedido (Simular Pago)'}
+          {isLoading && (
+            <svg
+              className="h-4 w-4 animate-spin"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          )}
+          {isLoading ? 'Procesando...' : 'Confirmar Pedido'}
         </button>
       </form>
     </section>
