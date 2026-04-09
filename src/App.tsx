@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { CheckoutForm } from './modules/customer/CheckoutForm'
 import { CustomerView } from './modules/customer/CustomerView'
+import { OrderSuccessView } from './modules/customer/OrderSuccessView'
 import { useOrderStore } from './store/useOrderStore'
 import { ToastContainer } from './components/ToastContainer'
 
@@ -23,6 +24,7 @@ function App() {
         <Routes>
           <Route path="/" element={<CustomerView />} />
           <Route path="/checkout" element={<CheckoutForm />} />
+          <Route path="/order-success" element={<OrderSuccessView />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
