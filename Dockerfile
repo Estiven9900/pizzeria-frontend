@@ -6,6 +6,6 @@ COPY package.json package-lock.json ./
 RUN npm install --ignore-scripts
 COPY . .
 
-EXPOSE 5173
+EXPOSE 5173index
 
 CMD ["npm", "run", "dev", "--", "--host"]

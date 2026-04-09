@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react'
 import { useOrderStore } from '../../store/useOrderStore'
@@ -55,7 +55,20 @@ function ItemCountdown({ item }: { item: CartItemView }) {
 
 export function CartDrawer() {
   const isCartOpen = useOrderStore((state) => state.isCartOpen)
-  const cartItemViews = useOrderStore((state) => state.getCartItemView())
+  const cart = useOrderStore((state) => state.cart)
+  const cartItemViews = useMemo(
+    () =>
+      cart.map((item) => ({
+        cartItemId: item.cartItemId,
+        productConfigId: item.productConfigId,
+        displayName: item.name || item.productConfigId,
+        price: item.price ?? 0,
+        quantity: item.quantity,
+        lockedUntil: item.lockedUntil,
+        expired: item.expired,
+      })),
+    [cart],
+  )
   const totalPrice = useOrderStore((state) => state.getTotalPrice())
   const canCheckout = useOrderStore((state) => state.canCheckout())
   const hasExpired = useOrderStore((state) => state.hasExpiredItems())
